@@ -1,27 +1,22 @@
+server:
+  port: 8080
+
 spring:
   application:
-    name: backend
+    name: bookapp
   datasource:
-    url: jdbc:h2:mem:bookdb
     driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:bookdb
     username: sa
-    password:
+    password: 1234
   h2:
     console:
       enabled: true
       path: /h2-console
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: create
     show-sql: true
-    defer-datasource-initialization: true
-    properties:
-      hibernate:
-        format_sql: true
-  sql:
-    init:
-      mode: always
 
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
+cors:
+  allowed-origins: "http://localhost:5173"
