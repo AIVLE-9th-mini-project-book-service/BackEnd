@@ -127,4 +127,20 @@ public class BookController {
         );
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
+
+    //도서 수 통계
+    @GetMapping("/books/statistics/count/{type}")
+    public ResponseEntity<Map<String, Long>> getBookCountStatistics(
+            @PathVariable String type
+    ) {
+        return ResponseEntity.ok(bookService.getBookCountStatistics(type));
+    }
+
+    //좋아요 수 통계
+    @GetMapping("/books/statistics/likes/{type}")
+    public ResponseEntity<Map<String, Integer>> getLikesCountStatistics(
+            @PathVariable String type
+    ) {
+        return ResponseEntity.ok(bookService.getLikesCountStatistics(type));
+    }
 }
