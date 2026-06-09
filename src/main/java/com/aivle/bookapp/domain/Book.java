@@ -3,6 +3,8 @@ package com.aivle.bookapp.domain;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Getter
@@ -42,9 +44,11 @@ public class Book {
     @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
     private Integer likes = 0;
 
-    @Column
+    @CreationTimestamp
+    @Column(updatable = false)
     private java.time.LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column
     private java.time.LocalDateTime updatedAt;
 
