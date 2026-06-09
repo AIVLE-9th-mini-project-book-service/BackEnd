@@ -1,7 +1,7 @@
 package com.aivle.bookapp.service;
 
 import com.aivle.bookapp.domain.Comment;
-import com.aivle.bookapp.exception.BookNotFountException;
+import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ public class CommentsService {
     @Transactional(readOnly = true)
     public Comment findById(Long id){
         return commentRepository.findById(id).orElseThrow(()
-                ->new BookNotFountException(id));
+                ->new BookNotFoundException(id));
     }
 
     //도서 후기 수정
@@ -49,7 +49,7 @@ public class CommentsService {
         if(commentRepository.existsById(id)){
             commentRepository.deleteById(id);
         }else{
-            throw new BookNotFountException(id);
+            throw new BookNotFoundException(id);
         }
     }
 }

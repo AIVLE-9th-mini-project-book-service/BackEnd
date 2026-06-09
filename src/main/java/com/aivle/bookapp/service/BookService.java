@@ -1,7 +1,7 @@
 package com.aivle.bookapp.service;
 
 import com.aivle.bookapp.domain.Book;
-import com.aivle.bookapp.exception.BookNotFountException;
+import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.repository.BookRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,7 +23,7 @@ public class BookService {
     @Transactional(readOnly = true)
     public Book findById(Long id){
         return bookRepository.findById(id).orElseThrow(()
-                ->new BookNotFountException(id));
+                ->new BookNotFoundException(id));
     }
 
     @Transactional(readOnly = true)
@@ -141,7 +141,7 @@ public class BookService {
         if(bookRepository.existsById(id)){
             bookRepository.deleteById(id);
         }else{
-            throw new BookNotFountException(id);
+            throw new BookNotFoundException(id);
         }
     }
 
