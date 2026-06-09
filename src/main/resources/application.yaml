@@ -17,3 +17,6 @@ spring:
     hibernate:
       ddl-auto: create
     show-sql: true
+
+cors:
+  allowed-origins: "http://localhost:5173"
