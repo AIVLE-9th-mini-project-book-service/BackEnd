@@ -1,6 +1,8 @@
 package com.aivle.bookapp.controller;
 
 import com.aivle.bookapp.domain.Book;
+import com.aivle.bookapp.dto.CoverImageUpdateRequest;
+import com.aivle.bookapp.dto.GenerateCoverRequest;
 import com.aivle.bookapp.service.BookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -114,10 +116,22 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
+    // AI 표지 이미지 생성 (백엔드에서 OpenAI 호출)
+    @PostMapping("/books/{id}/cover/generate")
+    public ResponseEntity<Map<String, Object>> generateCover(@PathVariable Long id, @Valid @RequestBody GenerateCoverRequest request) {
+        Book updatedBook = bookService.generateCover(id, request);
+        Map<String, Object> body = Map.of(
+                "id", updatedBook.getId(),
+                "message", "표지 이미지 생성 성공",
+                "coverImageUrl", updatedBook.getCoverImageUrl()
+        );
+        return ResponseEntity.status(HttpStatus.OK).body(body);
+    }
+
     // AI 표지 이미지 저장
     @PatchMapping("/books/{id}/cover")
-    public ResponseEntity<Map<String, Object>> saveImgUrl(@PathVariable Long id, @RequestBody Book book) {
-        Book updatedBook = bookService.saveImgUrl(id, book);
+    public ResponseEntity<Map<String, Object>> saveImgUrl(@PathVariable Long id, @Valid @RequestBody CoverImageUpdateRequest request) {
+        Book updatedBook = bookService.saveImgUrl(id, request);
         Map<String, Object> body = Map.of(
                 "id", updatedBook.getId(),
                 "message", "도서 수정 성공",
