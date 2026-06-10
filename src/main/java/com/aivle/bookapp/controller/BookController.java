@@ -3,6 +3,7 @@ package com.aivle.bookapp.controller;
 import com.aivle.bookapp.domain.Book;
 import com.aivle.bookapp.dto.BookSearchRequest;
 import com.aivle.bookapp.dto.BookSearchResponse;
+import com.aivle.bookapp.dto.BookUpdateRequest;
 import com.aivle.bookapp.service.BookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -76,8 +77,8 @@ public class BookController {
 
     // 도서 수정
     @PatchMapping("/books/{id}")
-    public ResponseEntity<Map<String, Object>> updateBook(@PathVariable Long id, @RequestBody Book book) {
-        Book updatedBook = bookService.update(id, book);
+    public ResponseEntity<Map<String, Object>> updateBook(@PathVariable Long id, @RequestBody BookUpdateRequest dto) {
+        Book updatedBook = bookService.update(id, dto);
         Map<String, Object> body = Map.of(
                 "id", updatedBook.getId(),
                 "message", "도서 수정 성공"

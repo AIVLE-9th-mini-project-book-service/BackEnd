@@ -3,6 +3,7 @@ package com.aivle.bookapp.service;
 import com.aivle.bookapp.domain.Book;
 import com.aivle.bookapp.dto.BookSearchRequest;
 import com.aivle.bookapp.dto.BookSearchResponse;
+import com.aivle.bookapp.dto.BookUpdateRequest;
 import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.repository.BookRepository;
 import lombok.RequiredArgsConstructor;
@@ -100,29 +101,29 @@ public class BookService {
 
     // 도서 수정
     @Transactional
-    public Book update(Long id, Book book) {
+    public Book update(Long id, BookUpdateRequest dto) {
         Book existing = findById(id);
 
-        if (book.getTitle() != null) {
-            existing.setTitle(book.getTitle());
+        if (dto.title() != null) {
+            existing.setTitle(dto.title());
         }
-        if (book.getAuthor() != null) {
-            existing.setAuthor(book.getAuthor());
+        if (dto.author() != null) {
+            existing.setAuthor(dto.author());
         }
-        if (book.getGenre() != null) {
-            existing.setGenre(book.getGenre());
+        if (dto.genre() != null) {
+            existing.setGenre(dto.genre());
         }
-        if (book.getContent() != null) {
-            existing.setContent(book.getContent());
+        if (dto.content() != null) {
+            existing.setContent(dto.content());
         }
-        if (book.getTag() != null) {
-            existing.setTag(book.getTag());
+        if (dto.tag() != null) {
+            existing.setTag(dto.tag());
         }
-        if (book.getCoverImageUrl() != null) {
-            existing.setCoverImageUrl(book.getCoverImageUrl());
+        if (dto.coverImageUrl() != null) {
+            existing.setCoverImageUrl(dto.coverImageUrl());
         }
-        if (book.getSummary() != null) {
-            existing.setSummary(book.getSummary());
+        if (dto.summary() != null) {
+            existing.setSummary(dto.summary());
         }
         existing.setUpdatedAt(LocalDateTime.now());
 
