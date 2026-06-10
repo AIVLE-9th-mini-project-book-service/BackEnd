@@ -1,6 +1,8 @@
 package com.aivle.bookapp.service;
 
 import com.aivle.bookapp.domain.Book;
+import com.aivle.bookapp.dto.BookSearchRequest;
+import com.aivle.bookapp.dto.BookSearchResponse;
 import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.repository.BookRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,11 +16,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class BookService {
+
+    private static final int DEFAULT_POPULAR_LIMIT = 5;
+    private static final int MAX_POPULAR_LIMIT = 50;
 
     private final BookRepository bookRepository;
 
@@ -43,7 +49,7 @@ public class BookService {
         return bookRepository.save(book);
     }
 
-    // 기본 검색 (제목 OR 저자)
+/*    // 기본 검색 (제목 OR 저자)
     @Transactional(readOnly = true)
     public List<Book> searchBooks(String keyword) {
         return bookRepository.findByTitleContainingOrAuthorContaining(keyword, keyword);
@@ -78,7 +84,7 @@ public class BookService {
     @Transactional(readOnly = true)
     public List<Book> searchDetail(String genre, String tag) {
         return bookRepository.findByGenreAndTag(genre, tag);
-    }
+    }*/
 
     @Transactional(readOnly = true)
     public Page<Book> getPage(int page, int size, String sortBy) {
@@ -309,5 +315,60 @@ public class BookService {
         }
 
         return likesCountResult;
+    }
+
+    // 도서 검색
+    @Transactional(readOnly = true)
+    public Page<BookSearchResponse> search(BookSearchRequest request, Pageable pageable) {
+        List<String> genres = normalizeSearchValues(request.genres());
+        List<String> tags = normalizeSearchValues(request.tags());
+
+        return bookRepository.searchBooks(
+                        normalizeSearchValue(request.keyword()),
+                        emptyListGuard(genres),
+                        genres.isEmpty(),
+                        emptyListGuard(tags),
+                        tags.isEmpty(),
+                        pageable
+                )
+                .map(BookSearchResponse::from);
+    }
+
+    // 인기 도서 조회
+    @Transactional(readOnly = true)
+    public List<BookSearchResponse> getPopularBooks(int limit) {
+        Pageable pageable = PageRequest.of(0, normalizeLimit(limit));
+        return bookRepository.findPopularBooks(pageable)
+                .stream()
+                .map(BookSearchResponse::from)
+                .toList();
+    }
+
+    private int normalizeLimit(int limit) {
+        // 인기 도서 조회 개수를 기본값과 최대 허용값 사이로 제한
+        if (limit <= 0) return DEFAULT_POPULAR_LIMIT;
+        return Math.min(limit, MAX_POPULAR_LIMIT);
+    }
+
+    private String normalizeSearchValue(String value) {
+        // 검색 조건 비교를 위해 null, 앞뒤 공백, 대소문자 차이를 정리
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private List<String> normalizeSearchValues(List<String> values) {
+        // 다중 쿼리 파라미터와 콤마로 묶인 값을 모두 동일한 리스트 조건으로 정리
+        if (values == null) return List.of();
+
+        return values.stream()
+                .flatMap(value -> List.of(value.split(",")).stream())
+                .map(this::normalizeSearchValue)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
+    }
+
+    private List<String> emptyListGuard(List<String> values) {
+        // JPQL의 IN 조건에 빈 리스트가 들어가지 않도록 더미 값을 넣어 쿼리 오류를 방지
+        return values.isEmpty() ? List.of("__empty__") : values;
     }
 }
