@@ -13,71 +13,79 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequiredArgsConstructor // final 붙은 키워드들만 초기화
+@RequiredArgsConstructor
 public class BookController {
-
-    //-----------테스트용 코드--------
 
     private final BookService bookService;
 
-    @GetMapping("/books/{id}")
-    public Book getBook(@PathVariable Long id){
-       return bookService.findById(id);
-    }
-
+    // 도서 목록 조회
     @GetMapping("/books")
-    public List<Book> getAll(){
-       return bookService.findAll();
+    public List<Book> findAll() {
+        return bookService.findAll();
     }
 
-    @GetMapping("/books/count")
-    public long getCount(){
-        return bookService.count();
+    // 도서 상세 조회
+    @GetMapping("/books/{id}")
+    public Book findById(@PathVariable Long id) {
+        return bookService.findById(id);
     }
 
+    // 도서 등록
+    @PostMapping("/books")
+    public ResponseEntity<Book> createBook(@Valid @RequestBody Book book) {
+        Book saved = bookService.create(book);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    // 기본 검색 (제목 OR 저자)
+    @GetMapping("/books/search")
+    public List<Book> searchBooks(@RequestParam String keyword) {
+        return bookService.searchBooks(keyword);
+    }
+
+    // 제목 검색
     @GetMapping("/books/search/title")
-    public List<Book> searchByTitle(@RequestParam String title){
+    public List<Book> searchByTitle(@RequestParam String title) {
         return bookService.searchByTitle(title);
     }
 
-    @GetMapping("/books/search")
-    public List<Book> searchByKeyword(@RequestParam String keyword){
+    // 제목 키워드 검색
+    @GetMapping("/books/search/keyword")
+    public List<Book> searchByKeyword(@RequestParam String keyword) {
         return bookService.searchByKeyword(keyword);
     }
 
-    @GetMapping("/books/search/detail")
-    public List<Book> searchByTileAndAuthor(@RequestParam String title, String author){
-        return bookService.searchByTitleAndAuthor(title,author);
+    // 제목 + 저자 검색
+    @GetMapping("/books/search/title-author")
+    public List<Book> searchByTitleAndAuthor(@RequestParam String title, @RequestParam String author) {
+        return bookService.searchByTitleAndAuthor(title, author);
     }
 
+    // 저자별 도서 제목 조회
     @GetMapping("/books/search/author")
-    public List<String> authorGetTitle(@RequestParam String author){
+    public List<String> authorGetTitle(@RequestParam String author) {
         return bookService.authorGetTitle(author);
     }
 
+    // 상세 검색 (장르 AND 태그)
+    @GetMapping("/books/search/detail")
+    public List<Book> searchDetail(@RequestParam String genre, @RequestParam String tag) {
+        return bookService.searchDetail(genre, tag);
+    }
+
     @GetMapping("/books/page")
-    public Page<Book> getPage(@RequestParam int page, @RequestParam int size, @RequestParam String sortBy){
+    public Page<Book> getPage(@RequestParam int page, @RequestParam int size, @RequestParam String sortBy) {
         return bookService.getPage(page, size, sortBy);
     }
 
-    @PostMapping("/books")
-    public ResponseEntity<Book> createBook(@Valid @RequestBody Book book){
-
-        Book saved = bookService.bookCreate(book);
-       return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    @GetMapping("/books/count")
+    public long getCount() {
+        return bookService.count();
     }
 
-
-
-
-
-
-
-    //-----------5차 미프 update, delete-----------
-
-    //도서 수정
+    // 도서 수정
     @PatchMapping("/books/{id}")
-    public ResponseEntity<Map<String, Object>> updateBook(@PathVariable Long id, @RequestBody Book book){
+    public ResponseEntity<Map<String, Object>> updateBook(@PathVariable Long id, @RequestBody Book book) {
         Book updatedBook = bookService.update(id, book);
         Map<String, Object> body = Map.of(
                 "id", updatedBook.getId(),
@@ -86,9 +94,9 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
-    //도서 삭제(휴지통 이동)
+    // 도서 삭제(휴지통 이동)
     @PatchMapping("/books/trash/{id}")
-    public ResponseEntity<Map<String, Object>>  moveToTrash(@PathVariable Long id){
+    public ResponseEntity<Map<String, Object>> moveToTrash(@PathVariable Long id) {
         bookService.moveToTrash(id);
         Map<String, Object> body = Map.of(
                 "message", "도서 삭제 성공"
@@ -96,9 +104,9 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
-    //도서 복원
+    // 도서 복원
     @PatchMapping("/books/restore/{id}")
-    public ResponseEntity<Map<String, Object>> restore(@PathVariable Long id){
+    public ResponseEntity<Map<String, Object>> restore(@PathVariable Long id) {
         bookService.restore(id);
         Map<String, Object> body = Map.of(
                 "message", "도서 복원 성공"
@@ -106,21 +114,27 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
-    //AI 표지 이미지 저장
+    // AI 표지 이미지 저장
     @PatchMapping("/books/{id}/cover")
-    public ResponseEntity<Map<String, Object>>  saveImgUrl(@PathVariable Long id, @RequestBody Book book){
+    public ResponseEntity<Map<String, Object>> saveImgUrl(@PathVariable Long id, @RequestBody Book book) {
         Book updatedBook = bookService.saveImgUrl(id, book);
         Map<String, Object> body = Map.of(
                 "id", updatedBook.getId(),
                 "message", "도서 수정 성공",
-                "coverImageUrl",updatedBook.getCoverImageUrl()
+                "coverImageUrl", updatedBook.getCoverImageUrl()
         );
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
-    //도서 영구 삭제
+    // 한줄평 저장
+    @PatchMapping("/books/{id}/summary")
+    public Book saveSummary(@PathVariable Long id, @RequestParam String summary) {
+        return bookService.saveSummary(id, summary);
+    }
+
+    // 도서 영구 삭제
     @DeleteMapping("/books/{id}")
-    public ResponseEntity<Map<String, Object>> deleteBook(@PathVariable Long id){
+    public ResponseEntity<Map<String, Object>> deleteBook(@PathVariable Long id) {
         bookService.deleteBook(id);
         Map<String, Object> body = Map.of(
                 "message", "도서 영구 삭제 성공"
