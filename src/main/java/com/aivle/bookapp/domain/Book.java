@@ -41,7 +41,7 @@ public class Book {
     @Column(columnDefinition = "TEXT")
     private String coverImageUrl;
 
-    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    @Column(nullable = false)
     private Integer likes = 0;
 
     @CreationTimestamp

@@ -114,6 +114,16 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
+    // 좋아요
+    @PatchMapping("/books/{id}/like")
+    public ResponseEntity<Map<String, Object>> likeBook(@PathVariable Long id) {
+        bookService.likeBook(id);
+        Map<String, Object> body = Map.of(
+                "message", "좋아요 성공"
+        );
+        return ResponseEntity.status(HttpStatus.OK).body(body);
+    }
+
     // AI 표지 이미지 저장
     @PatchMapping("/books/{id}/cover")
     public ResponseEntity<Map<String, Object>> saveImgUrl(@PathVariable Long id, @RequestBody Book book) {
