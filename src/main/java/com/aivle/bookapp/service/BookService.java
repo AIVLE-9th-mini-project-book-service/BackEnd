@@ -225,16 +225,16 @@ public class BookService {
     // 도서 수 통계
     @Transactional(readOnly = true)
     public Map<String, Object> getBookCountStatistics(String type) {
-        if (type == null || type.isBlank() || type.equals("all")) {
+        if (type == null || type.isBlank()) {
             Map<String, Object> result = new HashMap<>();
 
             result.put("genre", getBookCountByGenre());
             result.put("tag", getBookCountByTag());
 
             return result;
-        } else if (type.equals("genre")) {
+        } else if ("genre".equals(type)) {
             return Map.of("genre", getBookCountByGenre());
-        } else if (type.equals("tag")) {
+        } else if ("tag".equals(type)) {
             return Map.of("tag", getBookCountByTag());
         } else {
             throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
@@ -278,17 +278,17 @@ public class BookService {
     // 좋아요 수 통계
     @Transactional(readOnly = true)
     public Map<String, Object> getLikesCountStatistics(String type) {
-        if (type == null || type.isBlank() || type.equals("all")) {
+        if (type == null || type.isBlank()) {
             Map<String, Object> result = new HashMap<>();
 
             result.put("genre", getLikesCountByGenre());
             result.put("tag", getLikesCountByTag());
 
             return result;
-        } else if (type.equals("genre")) {
+        } else if ("genre".equals(type)) {
             return Map.of("genre", getLikesCountByGenre());
 
-        } else if (type.equals("tag")) {
+        } else if ("tag".equals(type)) {
             return Map.of("tag", getLikesCountByTag());
         } else {
             throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
