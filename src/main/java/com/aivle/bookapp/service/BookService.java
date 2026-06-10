@@ -191,18 +191,27 @@ public class BookService {
     public List<Book> getActiveBooks() {
         return bookRepository.findAll()
                 .stream()
-                .filter(book -> book.getDeletedAt() == null)
+                //.filter(book -> book.getDeletedAt() == null)
                 .toList();
     }
 
     // 도서 수 통계
     @Transactional(readOnly = true)
-    public Map<String, Long> getBookCountStatistics(String type) {
+    public Map<String, Object> getBookCountStatistics(String type) {
+        if (type == null || type.isBlank()) {
+            Map<String, Object> bookCountResult = new HashMap<>();
+
+            bookCountResult.put("genre", getBookCountByGenre());
+            bookCountResult.put("tag", getBookCountByTag());
+
+            return bookCountResult;
+        }
+
         if (type.equals("genre")) {
-            return getBookCountByGenre();
+            return Map.of("genre", getBookCountByGenre());
         }
         if (type.equals("tag")) {
-            return getBookCountByTag();
+            return Map.of("tag", getBookCountByTag());
         }
 
         throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
@@ -210,19 +219,19 @@ public class BookService {
 
     // 장르별 도서 수 합계
     private Map<String, Long> getBookCountByGenre() {
-        Map<String, Long> bookCount = new HashMap<>();
+        Map<String, Long> bookCountResult = new HashMap<>();
 
         for (Book book : getActiveBooks()) {
             String genre = book.getGenre() != null ? book.getGenre() : "기타";
-            bookCount.put(genre, bookCount.getOrDefault(genre, 0L) + 1);
+            bookCountResult.put(genre, bookCountResult.getOrDefault(genre, 0L) + 1);
         }
 
-        return bookCount;
+        return bookCountResult;
     }
 
     // 태그별 도서 수 합계
     private Map<String, Long> getBookCountByTag() {
-        Map<String, Long> bookCount = new HashMap<>();
+        Map<String, Long> bookCountResult = new HashMap<>();
 
         for (Book book : getActiveBooks()) {
             if (book.getTag() == null || book.getTag().trim().isEmpty()) {
@@ -235,22 +244,30 @@ public class BookService {
                 if (trimTag.isEmpty()) {
                     continue;
                 }
-
-                bookCount.put(trimTag, bookCount.getOrDefault(trimTag, 0L) + 1);
+                bookCountResult.put(trimTag, bookCountResult.getOrDefault(trimTag, 0L) + 1);
             }
         }
 
-        return bookCount;
+        return bookCountResult;
     }
 
     // 좋아요 수 통계
     @Transactional(readOnly = true)
-    public Map<String, Integer> getLikesCountStatistics(String type) {
+    public Map<String, Object> getLikesCountStatistics(String type) {
+        if (type == null || type.isBlank()) {
+            Map<String, Object> likesCountResult = new HashMap<>();
+
+            likesCountResult.put("genre", getLikesCountByGenre());
+            likesCountResult.put("tag", getLikesCountByTag());
+
+            return likesCountResult;
+        }
+
         if (type.equals("genre")) {
-            return getLikesCountByGenre();
+            return Map.of("genre", getLikesCountByGenre());
         }
         if (type.equals("tag")) {
-            return getLikesCountByTag();
+            return Map.of("tag", getLikesCountByTag());
         }
 
         throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
@@ -258,21 +275,21 @@ public class BookService {
 
     // 장르별 좋아요 수 합계
     private Map<String, Integer> getLikesCountByGenre() {
-        Map<String, Integer> likesCount = new HashMap<>();
+        Map<String, Integer> likesCountResult = new HashMap<>();
 
         for (Book book : getActiveBooks()) {
             String genre = book.getGenre() != null ? book.getGenre() : "기타";
             int likes = book.getLikes() != null ? book.getLikes() : 0;
 
-            likesCount.put(genre, likesCount.getOrDefault(genre, 0) + likes);
+            likesCountResult.put(genre, likesCountResult.getOrDefault(genre, 0) + likes);
         }
 
-        return likesCount;
+        return likesCountResult;
     }
 
     // 태그별 좋아요 수 합계
     private Map<String, Integer> getLikesCountByTag() {
-        Map<String, Integer> likesCount = new HashMap<>();
+        Map<String, Integer> likesCountResult = new HashMap<>();
 
         for (Book book : getActiveBooks()) {
             if (book.getTag() == null || book.getTag().trim().isEmpty()) {
@@ -287,10 +304,10 @@ public class BookService {
                     continue;
                 }
 
-                likesCount.put(trimTag, likesCount.getOrDefault(trimTag, 0) + likes);
+                likesCountResult.put(trimTag, likesCountResult.getOrDefault(trimTag, 0) + likes);
             }
         }
 
-        return likesCount;
+        return likesCountResult;
     }
 }
