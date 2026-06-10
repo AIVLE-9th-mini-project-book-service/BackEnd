@@ -1,11 +1,7 @@
 package com.aivle.bookapp.controller;
 
 import com.aivle.bookapp.domain.Book;
-import com.aivle.bookapp.dto.BookSearchRequest;
-import com.aivle.bookapp.dto.BookSearchResponse;
-import com.aivle.bookapp.dto.CoverImageUpdateRequest;
-import com.aivle.bookapp.dto.GenerateCoverRequest;
-import com.aivle.bookapp.dto.BookUpdateRequest;
+import com.aivle.bookapp.dto.*;
 import com.aivle.bookapp.service.BookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,8 +43,9 @@ public class BookController {
 
     // 도서 등록
     @PostMapping("/books")
-    public ResponseEntity<Book> createBook(@Valid @RequestBody Book book) {
-        Book saved = bookService.create(book);
+    public ResponseEntity<Book> createBook(@Valid @RequestBody BookCreateRequest request) {
+        Book saved = bookService.create(request);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
