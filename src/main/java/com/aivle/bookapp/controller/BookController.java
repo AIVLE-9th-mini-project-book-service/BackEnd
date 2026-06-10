@@ -154,7 +154,7 @@ public class BookController {
     //도서 수 통계
     @GetMapping("/books/statistics/count")
     public ResponseEntity<Map<String, Object>> getBookCountStatistics(
-            @RequestParam(required = false) String type
+            @RequestParam(required = false) List<String> type
     ) {
         return ResponseEntity.ok(bookService.getBookCountStatistics(type));
     }
@@ -162,7 +162,7 @@ public class BookController {
     //좋아요 수 통계
     @GetMapping("/books/statistics/likes")
     public ResponseEntity<Map<String, Object>> getLikesCountStatistics(
-            @RequestParam(required = false) String type
+            @RequestParam(required = false) List<String> type
     ) {
         return ResponseEntity.ok(bookService.getLikesCountStatistics(type));
     }

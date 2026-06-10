@@ -224,21 +224,27 @@ public class BookService {
 
     // 도서 수 통계
     @Transactional(readOnly = true)
-    public Map<String, Object> getBookCountStatistics(String type) {
-        if (type == null || type.isBlank()) {
-            Map<String, Object> result = new HashMap<>();
-
-            result.put("genre", getBookCountByGenre());
-            result.put("tag", getBookCountByTag());
-
-            return result;
-        } else if ("genre".equals(type)) {
-            return Map.of("genre", getBookCountByGenre());
-        } else if ("tag".equals(type)) {
-            return Map.of("tag", getBookCountByTag());
-        } else {
-            throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
+    public Map<String, Object> getBookCountStatistics(List<String> type) {
+        if (type == null || type.isEmpty()) {
+            return Map.of(
+                    "genre", getBookCountByGenre(),
+                    "tag", getBookCountByTag()
+            );
         }
+
+        Map<String, Object> result = new HashMap<>();
+
+        for (String t : type) {
+            switch (t) {
+                case "genre" -> result.put("genre", getBookCountByGenre());
+                case "tag" -> result.put("tag", getBookCountByTag());
+                default -> throw new IllegalArgumentException(
+                        "type은 genre 또는 tag만 가능합니다."
+                );
+            }
+        }
+
+        return result;
     }
 
     // 장르별 도서 수 합계
@@ -277,22 +283,27 @@ public class BookService {
 
     // 좋아요 수 통계
     @Transactional(readOnly = true)
-    public Map<String, Object> getLikesCountStatistics(String type) {
-        if (type == null || type.isBlank()) {
-            Map<String, Object> result = new HashMap<>();
-
-            result.put("genre", getLikesCountByGenre());
-            result.put("tag", getLikesCountByTag());
-
-            return result;
-        } else if ("genre".equals(type)) {
-            return Map.of("genre", getLikesCountByGenre());
-
-        } else if ("tag".equals(type)) {
-            return Map.of("tag", getLikesCountByTag());
-        } else {
-            throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
+    public Map<String, Object> getLikesCountStatistics(List<String> type) {
+        if (type == null || type.isEmpty()) {
+            return Map.of(
+                    "genre", getLikesCountByGenre(),
+                    "tag", getLikesCountByTag()
+            );
         }
+
+        Map<String, Object> result = new HashMap<>();
+
+        for (String t : type) {
+            switch (t) {
+                case "genre" -> result.put("genre", getLikesCountByGenre());
+                case "tag" -> result.put("tag", getLikesCountByTag());
+                default -> throw new IllegalArgumentException(
+                        "type은 genre 또는 tag만 가능합니다."
+                );
+            }
+        }
+
+        return result;
     }
 
     // 장르별 좋아요 수 합계
