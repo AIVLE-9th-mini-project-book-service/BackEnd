@@ -16,7 +16,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create
+    defer-datasource-initialization: true   # Hibernate 테이블 생성 완료 후 data.sql 실행
     show-sql: true
+  sql:
+    init:
+      mode: always                          # ddl-auto: update로 변경 시 never로 함께 변경
 
 cors:
   allowed-origins: "http://localhost:5173"

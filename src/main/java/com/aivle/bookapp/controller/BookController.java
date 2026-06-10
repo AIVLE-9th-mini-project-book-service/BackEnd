@@ -1,15 +1,27 @@
 package com.aivle.bookapp.controller;
 
 import com.aivle.bookapp.domain.Book;
+import com.aivle.bookapp.dto.BookSearchRequest;
+import com.aivle.bookapp.dto.BookSearchResponse;
 import com.aivle.bookapp.dto.CoverImageUpdateRequest;
 import com.aivle.bookapp.dto.GenerateCoverRequest;
 import com.aivle.bookapp.service.BookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
@@ -39,40 +51,19 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
-    // 기본 검색 (제목 OR 저자)
+    // 도서 검색
     @GetMapping("/books/search")
-    public List<Book> searchBooks(@RequestParam String keyword) {
-        return bookService.searchBooks(keyword);
+    public Page<BookSearchResponse> searchBooks(
+            @ModelAttribute BookSearchRequest request,
+            @PageableDefault(size = 20) Pageable pageable
+    ) {
+        return bookService.search(request, pageable);
     }
 
-    // 제목 검색
-    @GetMapping("/books/search/title")
-    public List<Book> searchByTitle(@RequestParam String title) {
-        return bookService.searchByTitle(title);
-    }
-
-    // 제목 키워드 검색
-    @GetMapping("/books/search/keyword")
-    public List<Book> searchByKeyword(@RequestParam String keyword) {
-        return bookService.searchByKeyword(keyword);
-    }
-
-    // 제목 + 저자 검색
-    @GetMapping("/books/search/title-author")
-    public List<Book> searchByTitleAndAuthor(@RequestParam String title, @RequestParam String author) {
-        return bookService.searchByTitleAndAuthor(title, author);
-    }
-
-    // 저자별 도서 제목 조회
-    @GetMapping("/books/search/author")
-    public List<String> authorGetTitle(@RequestParam String author) {
-        return bookService.authorGetTitle(author);
-    }
-
-    // 상세 검색 (장르 AND 태그)
-    @GetMapping("/books/search/detail")
-    public List<Book> searchDetail(@RequestParam String genre, @RequestParam String tag) {
-        return bookService.searchDetail(genre, tag);
+    // 인기 도서 조회
+    @GetMapping("/books/popular")
+    public List<BookSearchResponse> getPopularBooks(@RequestParam(defaultValue = "5") int limit) {
+        return bookService.getPopularBooks(limit);
     }
 
     @GetMapping("/books/page")
@@ -112,6 +103,16 @@ public class BookController {
         bookService.restore(id);
         Map<String, Object> body = Map.of(
                 "message", "도서 복원 성공"
+        );
+        return ResponseEntity.status(HttpStatus.OK).body(body);
+    }
+
+    // 좋아요
+    @PatchMapping("/books/{id}/like")
+    public ResponseEntity<Map<String, Object>> likeBook(@PathVariable Long id) {
+        bookService.likeBook(id);
+        Map<String, Object> body = Map.of(
+                "message", "좋아요 성공"
         );
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
@@ -157,17 +158,17 @@ public class BookController {
     }
 
     //도서 수 통계
-    @GetMapping("/books/statistics/count/{type}")
-    public ResponseEntity<Map<String, Long>> getBookCountStatistics(
-            @PathVariable String type
+    @GetMapping("/books/statistics/count")
+    public ResponseEntity<Map<String, Object>> getBookCountStatistics(
+            @RequestParam(required = false) String type
     ) {
         return ResponseEntity.ok(bookService.getBookCountStatistics(type));
     }
 
     //좋아요 수 통계
-    @GetMapping("/books/statistics/likes/{type}")
-    public ResponseEntity<Map<String, Integer>> getLikesCountStatistics(
-            @PathVariable String type
+    @GetMapping("/books/statistics/likes")
+    public ResponseEntity<Map<String, Object>> getLikesCountStatistics(
+            @RequestParam(required = false) String type
     ) {
         return ResponseEntity.ok(bookService.getLikesCountStatistics(type));
     }
