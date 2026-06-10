@@ -115,6 +115,7 @@ public class BookService {
         if (book.getSummary() != null) {
             existing.setSummary(book.getSummary());
         }
+        existing.setUpdatedAt(LocalDateTime.now());
 
         return bookRepository.save(existing);
     }
@@ -124,6 +125,7 @@ public class BookService {
     public Book moveToTrash(Long id) {
         Book existing = findById(id);
         existing.setDeletedAt(LocalDateTime.now());
+        existing.setUpdatedAt(LocalDateTime.now());
         return bookRepository.save(existing);
     }
 
@@ -132,6 +134,7 @@ public class BookService {
     public Book restore(Long id) {
         Book existing = findById(id);
         existing.setDeletedAt(null);
+        existing.setUpdatedAt(LocalDateTime.now());
         return bookRepository.save(existing);
     }
 
