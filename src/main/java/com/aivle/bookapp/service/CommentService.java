@@ -2,6 +2,7 @@ package com.aivle.bookapp.service;
 
 import com.aivle.bookapp.domain.Book;
 import com.aivle.bookapp.domain.Comment;
+import com.aivle.bookapp.dto.CommentUpdateRequest;
 import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.repository.BookRepository;
 import com.aivle.bookapp.repository.CommentRepository;
@@ -50,19 +51,19 @@ public class CommentService {
 
     //도서 후기 수정
     @Transactional
-    public Comment commentUpdate(Long id, Comment comment) {
+    public Comment commentUpdate(Long id, CommentUpdateRequest dto) {
         Comment existing = findById(id);
         if (existing == null) {
             throw new NoSuchElementException("해당 도서 후기를 찾을 수 없습니다.");
         }
 
 
-        if (comment.getPassword() == null || !existing.getPassword().equals(comment.getPassword())) {
+        if (dto.password() == null || !existing.getPassword().equals(dto.password())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "비밀번호가 일치하지 않습니다.");
         }
 
-        if(comment.getText()!= null){
-            existing.setText(comment.getText());
+        if(dto.text()!= null){
+            existing.setText(dto.text());
         }
 
         return commentRepository.save(existing);
