@@ -1,11 +1,7 @@
 package com.aivle.bookapp.service;
 
 import com.aivle.bookapp.domain.Book;
-import com.aivle.bookapp.dto.BookSearchRequest;
-import com.aivle.bookapp.dto.BookSearchResponse;
-import com.aivle.bookapp.dto.CoverImageUpdateRequest;
-import com.aivle.bookapp.dto.GenerateCoverRequest;
-import com.aivle.bookapp.dto.BookUpdateRequest;
+import com.aivle.bookapp.dto.*;
 import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.exception.OpenAiException;
 import tools.jackson.databind.ObjectMapper;
@@ -65,10 +61,19 @@ public class BookService {
 
     // 도서 등록 + like 0 기본값 추가
     @Transactional
-    public Book create(Book book) {
-        if (book.getLikes() == null) {
-            book.setLikes(0);
-        }
+    public Book create(BookCreateRequest request) {
+
+        Book book = new Book();
+
+        book.setTitle(request.title());
+        book.setAuthor(request.author());
+        book.setGenre(request.genre());
+        book.setContent(request.content());
+        book.setTag(request.tag());
+        book.setCoverImageUrl(request.coverImageUrl());
+
+        book.setLikes(0);
+
         return bookRepository.save(book);
     }
 
