@@ -1,6 +1,7 @@
 package com.aivle.bookapp.controller;
 
 import com.aivle.bookapp.domain.Comment;
+import com.aivle.bookapp.dto.CommentCreateRequest;
 import com.aivle.bookapp.dto.CommentUpdateRequest;
 import com.aivle.bookapp.service.CommentService;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +21,9 @@ public class CommentController {
 
     // 후기 등록
     @PostMapping("/books/{bookId}/comments")
-    public ResponseEntity<Comment> createComment(@PathVariable Long bookId, @RequestBody Comment comment) {
-        Comment saved = commentService.createComment(bookId, comment);
+    public ResponseEntity<Comment> createComment(@PathVariable Long bookId, @RequestBody CommentCreateRequest request) {
+        Comment saved = commentService.createComment(bookId, request);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
