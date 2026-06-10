@@ -34,9 +34,12 @@ public class BookService {
         return bookRepository.findAll();
     }
 
-    // 도서 등록
+    // 도서 등록 + like 0 기본값 추가
     @Transactional
     public Book create(Book book) {
+        if (book.getLikes() == null) {
+            book.setLikes(0);
+        }
         return bookRepository.save(book);
     }
 
@@ -154,6 +157,15 @@ public class BookService {
         Book existing = findById(id);
         existing.setCoverImageUrl(coverImageUrl);
         return bookRepository.save(existing);
+    }
+
+    // 좋아요 +1
+    @Transactional
+    public void likeBook(Long id) {
+        if (!bookRepository.existsById(id)) {
+            throw new BookNotFoundException(id);
+        }
+        bookRepository.incrementLikes(id);
     }
 
     // 한줄평 저장
