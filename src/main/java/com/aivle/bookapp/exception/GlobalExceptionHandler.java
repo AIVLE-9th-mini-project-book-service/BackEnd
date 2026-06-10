@@ -21,4 +21,10 @@ public class GlobalExceptionHandler {
         Map<String, String> body = Map.of("error", "Bad Request", "message", errorMessage);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
+
+    @ExceptionHandler({OpenAiException.class})
+    public ResponseEntity<Map<String, String>> handleOpenAiException(OpenAiException e) {
+        Map<String, String> body = Map.of("error", "OpenAI Error", "message", e.getMessage());
+        return ResponseEntity.status(e.getStatusCode()).body(body);
+    }
 }
