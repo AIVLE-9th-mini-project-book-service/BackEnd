@@ -6,8 +6,10 @@ import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.repository.BookRepository;
 import com.aivle.bookapp.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -55,10 +57,9 @@ public class CommentService {
         }
 
 
-        //401 예외처리 추가되면 주석 풀기
-//        if (comments.getPassword() == null || !existing.getPassword().equals(comments.getPassword())) {
-//            throw new UnauthorizedException("비밀번호가 일치하지 않습니다.");
-//        }
+        if (comment.getPassword() == null || !existing.getPassword().equals(comment.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "비밀번호가 일치하지 않습니다.");
+        }
 
         if(comment.getText()!= null){
             existing.setText(comment.getText());
