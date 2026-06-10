@@ -1,11 +1,7 @@
 package com.aivle.bookapp.controller;
 
 import com.aivle.bookapp.domain.Book;
-import com.aivle.bookapp.dto.BookSearchRequest;
-import com.aivle.bookapp.dto.BookSearchResponse;
-import com.aivle.bookapp.dto.CoverImageUpdateRequest;
-import com.aivle.bookapp.dto.GenerateCoverRequest;
-import com.aivle.bookapp.dto.BookUpdateRequest;
+import com.aivle.bookapp.dto.*;
 import com.aivle.bookapp.service.BookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,21 +10,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:3000")
 public class BookController {
 
     private final BookService bookService;
@@ -47,8 +36,9 @@ public class BookController {
 
     // 도서 등록
     @PostMapping("/books")
-    public ResponseEntity<Book> createBook(@Valid @RequestBody Book book) {
-        Book saved = bookService.create(book);
+    public ResponseEntity<Book> createBook(@Valid @RequestBody BookCreateRequest request) {
+        Book saved = bookService.create(request);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
@@ -161,7 +151,7 @@ public class BookController {
     //도서 수 통계
     @GetMapping("/books/statistics/count")
     public ResponseEntity<Map<String, Object>> getBookCountStatistics(
-            @RequestParam(required = false) String type
+            @RequestParam(required = false) List<String> type
     ) {
         return ResponseEntity.ok(bookService.getBookCountStatistics(type));
     }
@@ -169,7 +159,7 @@ public class BookController {
     //좋아요 수 통계
     @GetMapping("/books/statistics/likes")
     public ResponseEntity<Map<String, Object>> getLikesCountStatistics(
-            @RequestParam(required = false) String type
+            @RequestParam(required = false) List<String> type
     ) {
         return ResponseEntity.ok(bookService.getLikesCountStatistics(type));
     }
