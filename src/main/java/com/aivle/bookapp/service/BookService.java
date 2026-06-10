@@ -1,6 +1,7 @@
 package com.aivle.bookapp.service;
 
 import com.aivle.bookapp.domain.Book;
+import com.aivle.bookapp.domain.BookTag;
 import com.aivle.bookapp.dto.BookSearchRequest;
 import com.aivle.bookapp.dto.BookSearchResponse;
 import com.aivle.bookapp.dto.CoverImageUpdateRequest;
@@ -36,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -72,42 +74,6 @@ public class BookService {
         return bookRepository.save(book);
     }
 
-/*    // 기본 검색 (제목 OR 저자)
-    @Transactional(readOnly = true)
-    public List<Book> searchBooks(String keyword) {
-        return bookRepository.findByTitleContainingOrAuthorContaining(keyword, keyword);
-    }
-
-    // 제목 검색
-    @Transactional(readOnly = true)
-    public List<Book> searchByTitle(String title) {
-        return bookRepository.findByTitle(title);
-    }
-
-    // 제목 키워드 검색
-    @Transactional(readOnly = true)
-    public List<Book> searchByKeyword(String keyword) {
-        return bookRepository.findByTitleContaining(keyword);
-    }
-
-    // 제목 + 저자 검색
-    @Transactional(readOnly = true)
-    public List<Book> searchByTitleAndAuthor(String title, String author) {
-        return bookRepository.findByTitleAndAuthor(title, author);
-    }
-
-    // 저자별 도서 제목 조회
-    @Transactional(readOnly = true)
-    public List<String> authorGetTitle(String author) {
-        List<Book> books = bookRepository.findByAuthor(author);
-        return books.stream().map(Book::getTitle).toList();
-    }
-
-    // 상세 검색 (장르 AND 태그)
-    @Transactional(readOnly = true)
-    public List<Book> searchDetail(String genre, String tag) {
-        return bookRepository.findByGenreAndTag(genre, tag);
-    }*/
 
     @Transactional(readOnly = true)
     public Page<Book> getPage(int page, int size, String sortBy) {
@@ -139,7 +105,7 @@ public class BookService {
             existing.setContent(dto.content());
         }
         if (dto.tag() != null) {
-            existing.setTag(dto.tag());
+            existing.replaceTags(normalizeTagNames(dto.tag()));
         }
         if (dto.coverImageUrl() != null) {
             existing.setCoverImageUrl(dto.coverImageUrl());
@@ -261,17 +227,12 @@ public class BookService {
         Map<String, Long> bookCountResult = new HashMap<>();
 
         for (Book book : getActiveBooks()) {
-            if (book.getTag() == null || book.getTag().trim().isEmpty()) {
-                continue;
-            }
-
-            String[] tags = book.getTag().split(",");
-            for (String tag : tags) {
-                String trimTag = tag.trim();
-                if (trimTag.isEmpty()) {
+            for (BookTag tag : book.getTags()) {
+                String tagName = tag.getName();
+                if (tagName == null || tagName.isBlank()) {
                     continue;
                 }
-                bookCountResult.put(trimTag, bookCountResult.getOrDefault(trimTag, 0L) + 1);
+                bookCountResult.put(tagName, bookCountResult.getOrDefault(tagName, 0L) + 1);
             }
         }
 
@@ -313,7 +274,7 @@ public class BookService {
                 ---
                 Style: professional publishing quality, award-winning book cover art
                 """,
-                book.getTitle(), book.getAuthor(), book.getGenre(), book.getTag(),
+                book.getTitle(), book.getAuthor(), book.getGenre(), book.getTagText(),
                 book.getContent(), getGenreMood(book.getGenre()),
                 book.getTitle(), book.getAuthor()
         ).trim();
@@ -451,19 +412,14 @@ public class BookService {
         Map<String, Integer> likesCountResult = new HashMap<>();
 
         for (Book book : getActiveBooks()) {
-            if (book.getTag() == null || book.getTag().trim().isEmpty()) {
-                continue;
-            }
-
             int likes = book.getLikes() != null ? book.getLikes() : 0;
-            String[] tags = book.getTag().split(",");
-            for (String tag : tags) {
-                String trimTag = tag.trim();
-                if (trimTag.isEmpty()) {
+            for (BookTag tag : book.getTags()) {
+                String tagName = tag.getName();
+                if (tagName == null || tagName.isBlank()) {
                     continue;
                 }
 
-                likesCountResult.put(trimTag, likesCountResult.getOrDefault(trimTag, 0) + likes);
+                likesCountResult.put(tagName, likesCountResult.getOrDefault(tagName, 0) + likes);
             }
         }
 
@@ -523,5 +479,14 @@ public class BookService {
     private List<String> emptyListGuard(List<String> values) {
         // JPQL의 IN 조건에 빈 리스트가 들어가지 않도록 더미 값을 넣어 쿼리 오류를 방지
         return values.isEmpty() ? List.of("__empty__") : values;
+    }
+    private List<String> normalizeTagNames(String value) {
+        if (value == null) return List.of();
+
+        return Arrays.stream(value.split("[,/]"))
+                .map(String::trim)
+                .filter(tagName -> !tagName.isBlank())
+                .distinct()
+                .toList();
     }
 }
