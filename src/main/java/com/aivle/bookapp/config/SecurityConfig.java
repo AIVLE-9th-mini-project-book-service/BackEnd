@@ -44,6 +44,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/members/signup", "/members/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/books/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/books/*/comments").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/comments/*").permitAll() // 추가
+                        .requestMatchers(HttpMethod.PATCH, "/comments/*").permitAll()  // 추가
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
