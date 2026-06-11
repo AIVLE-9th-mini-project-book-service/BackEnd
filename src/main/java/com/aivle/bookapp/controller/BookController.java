@@ -149,6 +149,7 @@ public class BookController {
     }
 
     // AI 한줄평 생성
+    @Operation(summary = "AI 한줄평 생성", description = "OpenAI를 이용하여 도서 한줄평을 생성합니다.")
     @PostMapping("/books/{id}/summary/generate")
     public ResponseEntity<AiBookSummaryResponse> generateSummary(
             @PathVariable Long id,
