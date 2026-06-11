@@ -16,6 +16,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -50,7 +52,7 @@ class BookCoverControllerTest {
         mockBook.setTitle("어린왕자");
         mockBook.setAuthor("생텍쥐페리");
         mockBook.setGenre("소설");
-        mockBook.setTag("모험, 우정");
+        mockBook.replaceTags(List.of("모험", "우정"));
         mockBook.setContent("사막에서 만난 어린 왕자 이야기");
         mockBook.setCoverImageUrl("data:image/jpeg;base64,/9j/testdata");
         mockBook.setLikes(0);

@@ -1,11 +1,8 @@
 package com.aivle.bookapp.service;
 
 import com.aivle.bookapp.domain.Book;
-import com.aivle.bookapp.dto.BookSearchRequest;
-import com.aivle.bookapp.dto.BookSearchResponse;
-import com.aivle.bookapp.dto.CoverImageUpdateRequest;
-import com.aivle.bookapp.dto.GenerateCoverRequest;
-import com.aivle.bookapp.dto.BookUpdateRequest;
+import com.aivle.bookapp.domain.BookTag;
+import com.aivle.bookapp.dto.*;
 import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.exception.OpenAiException;
 import tools.jackson.databind.ObjectMapper;
@@ -37,6 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -66,49 +64,22 @@ public class BookService {
 
     // 도서 등록 + like 0 기본값 추가
     @Transactional
-    public Book create(Book book) {
-        if (book.getLikes() == null) {
-            book.setLikes(0);
-        }
+    public Book create(BookCreateRequest request) {
+
+        Book book = new Book();
+
+        book.setTitle(request.title());
+        book.setAuthor(request.author());
+        book.setGenre(request.genre());
+        book.setContent(request.content());
+        book.replaceTags(normalizeTagNames(request.tag()));
+        book.setCoverImageUrl(request.coverImageUrl());
+
+        book.setLikes(0);
+
         return bookRepository.save(book);
     }
 
-/*    // 기본 검색 (제목 OR 저자)
-    @Transactional(readOnly = true)
-    public List<Book> searchBooks(String keyword) {
-        return bookRepository.findByTitleContainingOrAuthorContaining(keyword, keyword);
-    }
-
-    // 제목 검색
-    @Transactional(readOnly = true)
-    public List<Book> searchByTitle(String title) {
-        return bookRepository.findByTitle(title);
-    }
-
-    // 제목 키워드 검색
-    @Transactional(readOnly = true)
-    public List<Book> searchByKeyword(String keyword) {
-        return bookRepository.findByTitleContaining(keyword);
-    }
-
-    // 제목 + 저자 검색
-    @Transactional(readOnly = true)
-    public List<Book> searchByTitleAndAuthor(String title, String author) {
-        return bookRepository.findByTitleAndAuthor(title, author);
-    }
-
-    // 저자별 도서 제목 조회
-    @Transactional(readOnly = true)
-    public List<String> authorGetTitle(String author) {
-        List<Book> books = bookRepository.findByAuthor(author);
-        return books.stream().map(Book::getTitle).toList();
-    }
-
-    // 상세 검색 (장르 AND 태그)
-    @Transactional(readOnly = true)
-    public List<Book> searchDetail(String genre, String tag) {
-        return bookRepository.findByGenreAndTag(genre, tag);
-    }*/
 
     @Transactional(readOnly = true)
     public Page<Book> getPage(int page, int size, String sortBy) {
@@ -140,7 +111,7 @@ public class BookService {
             existing.setContent(dto.content());
         }
         if (dto.tag() != null) {
-            existing.setTag(dto.tag());
+            existing.replaceTags(normalizeTagNames(dto.tag()));
         }
         if (dto.coverImageUrl() != null) {
             existing.setCoverImageUrl(dto.coverImageUrl());
@@ -219,64 +190,121 @@ public class BookService {
     public List<Book> getActiveBooks() {
         return bookRepository.findAll()
                 .stream()
-                //.filter(book -> book.getDeletedAt() == null)
+                .filter(book -> book.getDeletedAt() == null)
                 .toList();
     }
 
     // 도서 수 통계
     @Transactional(readOnly = true)
-    public Map<String, Object> getBookCountStatistics(String type) {
-        if (type == null || type.isBlank()) {
-            Map<String, Object> bookCountResult = new HashMap<>();
-
-            bookCountResult.put("genre", getBookCountByGenre());
-            bookCountResult.put("tag", getBookCountByTag());
-
-            return bookCountResult;
+    public Map<String, Object> getBookCountStatistics(List<String> type) {
+        if (type == null || type.isEmpty()) {
+            return Map.of(
+                    "genre", getBookCountByGenre(),
+                    "tag", getBookCountByTag()
+            );
         }
 
-        if (type.equals("genre")) {
-            return Map.of("genre", getBookCountByGenre());
-        }
-        if (type.equals("tag")) {
-            return Map.of("tag", getBookCountByTag());
+        Map<String, Object> result = new HashMap<>();
+
+        for (String t : type) {
+            switch (t) {
+                case "genre" -> result.put("genre", getBookCountByGenre());
+                case "tag" -> result.put("tag", getBookCountByTag());
+                default -> throw new IllegalArgumentException(
+                        "type은 genre 또는 tag만 가능합니다."
+                );
+            }
         }
 
-        throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
+        return result;
     }
 
     // 장르별 도서 수 합계
     private Map<String, Long> getBookCountByGenre() {
-        Map<String, Long> bookCountResult = new HashMap<>();
+        Map<String, Long> result = new HashMap<>();
 
         for (Book book : getActiveBooks()) {
             String genre = book.getGenre() != null ? book.getGenre() : "기타";
-            bookCountResult.put(genre, bookCountResult.getOrDefault(genre, 0L) + 1);
+            result.put(genre, result.getOrDefault(genre, 0L) + 1);
         }
 
-        return bookCountResult;
+        return result;
     }
 
     // 태그별 도서 수 합계
     private Map<String, Long> getBookCountByTag() {
-        Map<String, Long> bookCountResult = new HashMap<>();
+        Map<String, Long> result = new HashMap<>();
 
         for (Book book : getActiveBooks()) {
-            if (book.getTag() == null || book.getTag().trim().isEmpty()) {
-                continue;
-            }
-
-            String[] tags = book.getTag().split(",");
-            for (String tag : tags) {
-                String trimTag = tag.trim();
-                if (trimTag.isEmpty()) {
+            for (BookTag tag : book.getTags()) {
+                String tagName = tag.getName();
+                if (tagName == null || tagName.isBlank()) {
                     continue;
                 }
-                bookCountResult.put(trimTag, bookCountResult.getOrDefault(trimTag, 0L) + 1);
+
+                result.put(tagName, result.getOrDefault(tagName, 0L) + 1);
             }
         }
 
-        return bookCountResult;
+        return result;
+    }
+
+    // 좋아요 수 통계
+    @Transactional(readOnly = true)
+    public Map<String, Object> getLikesCountStatistics(List<String> type) {
+        if (type == null || type.isEmpty()) {
+            return Map.of(
+                    "genre", getLikesCountByGenre(),
+                    "tag", getLikesCountByTag()
+            );
+        }
+
+        Map<String, Object> result = new HashMap<>();
+
+        for (String t : type) {
+            switch (t) {
+                case "genre" -> result.put("genre", getLikesCountByGenre());
+                case "tag" -> result.put("tag", getLikesCountByTag());
+                default -> throw new IllegalArgumentException(
+                        "type? genre ?먮뒗 tag留?媛?ν빀?덈떎."
+                );
+            }
+        }
+
+        return result;
+    }
+
+    // ?λⅤ蹂?醫뗭븘?????⑷퀎
+    private Map<String, Integer> getLikesCountByGenre() {
+        Map<String, Integer> result = new HashMap<>();
+
+        for (Book book : getActiveBooks()) {
+            String genre = book.getGenre() != null ? book.getGenre() : "湲고?";
+            int likes = book.getLikes() != null ? book.getLikes() : 0;
+
+            result.put(genre, result.getOrDefault(genre, 0) + likes);
+        }
+
+        return result;
+    }
+
+    // ?쒓렇蹂?醫뗭븘?????⑷퀎
+    private Map<String, Integer> getLikesCountByTag() {
+        Map<String, Integer> result = new HashMap<>();
+
+        for (Book book : getActiveBooks()) {
+            int likes = book.getLikes() != null ? book.getLikes() : 0;
+            for (BookTag tag : book.getTags()) {
+                String tagName = tag.getName();
+                if (tagName == null || tagName.isBlank()) {
+                    continue;
+                }
+
+                result.put(tagName, result.getOrDefault(tagName, 0) + likes);
+            }
+        }
+
+        return result;
     }
 
     // AI 표지 이미지 생성 (OpenAI 호출 → 압축 → DB 저장)
@@ -314,7 +342,7 @@ public class BookService {
                 ---
                 Style: professional publishing quality, award-winning book cover art
                 """,
-                book.getTitle(), book.getAuthor(), book.getGenre(), book.getTag(),
+                book.getTitle(), book.getAuthor(), book.getGenre(), book.getTagText(),
                 book.getContent(), getGenreMood(book.getGenre()),
                 book.getTitle(), book.getAuthor()
         ).trim();
@@ -416,65 +444,6 @@ public class BookService {
         }
     }
 
-    // 좋아요 수 통계
-    @Transactional(readOnly = true)
-    public Map<String, Object> getLikesCountStatistics(String type) {
-        if (type == null || type.isBlank()) {
-            Map<String, Object> likesCountResult = new HashMap<>();
-
-            likesCountResult.put("genre", getLikesCountByGenre());
-            likesCountResult.put("tag", getLikesCountByTag());
-
-            return likesCountResult;
-        }
-
-        if (type.equals("genre")) {
-            return Map.of("genre", getLikesCountByGenre());
-        }
-        if (type.equals("tag")) {
-            return Map.of("tag", getLikesCountByTag());
-        }
-
-        throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
-    }
-
-    // 장르별 좋아요 수 합계
-    private Map<String, Integer> getLikesCountByGenre() {
-        Map<String, Integer> likesCountResult = new HashMap<>();
-
-        for (Book book : getActiveBooks()) {
-            String genre = book.getGenre() != null ? book.getGenre() : "기타";
-            int likes = book.getLikes() != null ? book.getLikes() : 0;
-
-            likesCountResult.put(genre, likesCountResult.getOrDefault(genre, 0) + likes);
-        }
-
-        return likesCountResult;
-    }
-
-    // 태그별 좋아요 수 합계
-    private Map<String, Integer> getLikesCountByTag() {
-        Map<String, Integer> likesCountResult = new HashMap<>();
-
-        for (Book book : getActiveBooks()) {
-            if (book.getTag() == null || book.getTag().trim().isEmpty()) {
-                continue;
-            }
-
-            int likes = book.getLikes() != null ? book.getLikes() : 0;
-            String[] tags = book.getTag().split(",");
-            for (String tag : tags) {
-                String trimTag = tag.trim();
-                if (trimTag.isEmpty()) {
-                    continue;
-                }
-
-                likesCountResult.put(trimTag, likesCountResult.getOrDefault(trimTag, 0) + likes);
-            }
-        }
-
-        return likesCountResult;
-    }
 
     // 도서 검색
     @Transactional(readOnly = true)
@@ -529,5 +498,14 @@ public class BookService {
     private List<String> emptyListGuard(List<String> values) {
         // JPQL의 IN 조건에 빈 리스트가 들어가지 않도록 더미 값을 넣어 쿼리 오류를 방지
         return values.isEmpty() ? List.of("__empty__") : values;
+    }
+    private List<String> normalizeTagNames(String value) {
+        if (value == null) return List.of();
+
+        return Arrays.stream(value.split("[,/]"))
+                .map(String::trim)
+                .filter(tagName -> !tagName.isBlank())
+                .distinct()
+                .toList();
     }
 }
