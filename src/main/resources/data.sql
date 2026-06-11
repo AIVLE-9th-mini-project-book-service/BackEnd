@@ -182,4 +182,4 @@ insert into comments (book_id, author, text, password, created_at) values
 (4, '박형우', '좋은 코드의 기준을 구체적으로 알려 줘서 개발 습관을 돌아보게 하는 유익한 책입니다.', 'dd', '2026-05-26 05:20:42.722'),
 (5, '김완수', '자기 자신을 찾아가는 여정을 깊이 있게 보여 줘서 여운이 오래 남는 작품입니다.', 'dd', '2026-05-26 05:20:42.722');
 
-ALTER TABLE BOOKS ALTER COLUMN ID RESTART WITH 12;
+ALTER TABLE books AUTO_INCREMENT = 12;
