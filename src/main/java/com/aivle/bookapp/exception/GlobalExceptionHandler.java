@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    // PATCH BadRequest,
+    // PATCH BadRequest
     @ExceptionHandler({IllegalArgumentException.class})
     public ResponseEntity<Map<String, String>> handleIllegalArgumentException (IllegalArgumentException e) {
         Map<String, String> body = Map.of("error","Bad Request", "message", e.getMessage());
@@ -52,12 +52,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidPasswordException.class)
     public ResponseEntity<Map<String, String>> handleInvalidPassword(InvalidPasswordException e) {
-        Map<String, String> body = Map.of("error", "Bad Request", "message", e.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
         Map<String, String> body = Map.of("error", "Bad Request", "message", e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
