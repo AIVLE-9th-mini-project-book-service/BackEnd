@@ -1,5 +1,6 @@
 package com.aivle.bookapp.service;
 
+import com.aivle.bookapp.domain.Book;
 import com.aivle.bookapp.domain.Comment;
 import com.aivle.bookapp.dto.CommentCreateRequest;
 import com.aivle.bookapp.dto.CommentUpdateRequest;
@@ -25,11 +26,12 @@ public class CommentService {
 
     // 후기 등록
     public Comment createComment(Long bookId, CommentCreateRequest request) {
-        bookRepository.findById(bookId).orElseThrow(() -> new BookNotFoundException(bookId));
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new BookNotFoundException(bookId));
 
         Comment comment = new Comment();
 
-        comment.setBookId(bookId);
+        comment.setBook(book);
 
         comment.setAuthor(request.author() == null || request.author().isBlank() ? "익명" : request.author());
 
@@ -44,7 +46,7 @@ public class CommentService {
 
     // 후기 조회
     public List<Comment> findComments(Long bookId) {
-        return commentRepository.findByBookId(bookId);
+        return commentRepository.findByBook_Id(bookId);
     }
 
     @Transactional(readOnly = true)

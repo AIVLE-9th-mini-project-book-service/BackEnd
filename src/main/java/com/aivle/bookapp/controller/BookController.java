@@ -4,6 +4,12 @@ import com.aivle.bookapp.domain.Book;
 import com.aivle.bookapp.dto.*;
 import com.aivle.bookapp.dto.AiBookSummaryRequest;
 import com.aivle.bookapp.dto.AiBookSummaryResponse;
+import com.aivle.bookapp.dto.BookSearchRequest;
+import com.aivle.bookapp.dto.BookSearchResponse;
+import com.aivle.bookapp.dto.CoverImageUpdateRequest;
+import com.aivle.bookapp.dto.GenerateCoverRequest;
+import com.aivle.bookapp.dto.BookUpdateRequest;
+import com.aivle.bookapp.dto.GenerateCoverResponse;
 import com.aivle.bookapp.service.BookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -67,6 +73,13 @@ public class BookController {
         return bookService.getPopularBooks(limit);
     }
 
+    // 도서 삭제 목록 조회
+    @Operation(summary = "도서 삭제 목록", description = "삭제된 전체 도서를 조회합니다.")
+    @GetMapping("/books/trash")
+    public List<Book> findAllDeletedBooks() {
+        return bookService.findAllByDeleted();
+    }
+
     @GetMapping("/books/page")
     public Page<Book> getPage(@RequestParam int page, @RequestParam int size, @RequestParam String sortBy) {
         return bookService.getPage(page, size, sortBy);
@@ -125,14 +138,13 @@ public class BookController {
     // AI 표지 이미지 생성 (백엔드에서 OpenAI 호출)
     @Operation(summary = "AI 표지 생성", description = "OpenAI를 이용하여 표지 이미지를 생성합니다.")
     @PostMapping("/books/{id}/cover/generate")
-    public ResponseEntity<Map<String, Object>> generateCover(@PathVariable Long id, @Valid @RequestBody GenerateCoverRequest request) {
+    public ResponseEntity<GenerateCoverResponse> generateCover(@PathVariable Long id, @Valid @RequestBody GenerateCoverRequest request) {
         Book updatedBook = bookService.generateCover(id, request);
-        Map<String, Object> body = Map.of(
-                "id", updatedBook.getId(),
-                "message", "표지 이미지 생성 성공",
-                "coverImageUrl", updatedBook.getCoverImageUrl()
-        );
-        return ResponseEntity.status(HttpStatus.OK).body(body);
+        return ResponseEntity.ok(new GenerateCoverResponse(
+                updatedBook.getId(),
+                "표지 이미지 생성 성공",
+                updatedBook.getCoverImageUrl()
+        ));
     }
 
     // AI 표지 이미지 저장

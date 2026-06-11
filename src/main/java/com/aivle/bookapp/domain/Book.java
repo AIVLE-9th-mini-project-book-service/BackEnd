@@ -1,5 +1,6 @@
 package com.aivle.bookapp.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Entity
+@Table(name = "books")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,15 +23,15 @@ public class Book {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank
+    @NotBlank(message = "제목은 필수입니다.")
     @Column(nullable = false, length = 200)
     private String title;
 
-    @NotBlank
+    @NotBlank(message = "저자는 필수입니다.")
     @Column(nullable = false)
     private String author;
 
-    @NotBlank
+    @NotBlank(message = "장르는 필수입니다.")
     @Column(nullable = false)
     private String genre;
 
@@ -38,9 +40,6 @@ public class Book {
 
     @Column(columnDefinition = "TEXT")
     private String summary;
-
-    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<BookTag> tags = new ArrayList<>();
 
     @Column(columnDefinition = "TEXT")
     private String coverImageUrl;
@@ -58,6 +57,14 @@ public class Book {
 
     @Column
     private java.time.LocalDateTime deletedAt;
+
+    // books에서 tag 칼럼 삭제 -> book_tags 테이블로 분리
+    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BookTag> tags = new ArrayList<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Comment> comments = new ArrayList<>();
 
     public void replaceTags(List<String> tagNames) {
         tags.clear();
