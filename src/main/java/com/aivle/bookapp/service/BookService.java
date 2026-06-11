@@ -2,12 +2,26 @@ package com.aivle.bookapp.service;
 
 import com.aivle.bookapp.domain.Book;
 import com.aivle.bookapp.domain.BookTag;
+import com.aivle.bookapp.domain.Member;
 import com.aivle.bookapp.dto.*;
 import com.aivle.bookapp.dto.AiBookSummaryRequest;
 import com.aivle.bookapp.dto.AiBookSummaryResponse;
 import com.aivle.bookapp.exception.BookNotFoundException;
+import com.aivle.bookapp.exception.MemberNotFoundException;
 import com.aivle.bookapp.exception.OpenAiException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import com.aivle.bookapp.repository.BookRepository;
+import com.aivle.bookapp.repository.MemberRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import javax.imageio.IIOImage;
@@ -20,28 +34,18 @@ import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
-import java.util.Base64;
-import com.aivle.bookapp.repository.BookRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.JsonNode;
-
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -55,6 +59,7 @@ public class BookService {
     private static final int MAX_POPULAR_LIMIT = 50;
 
     private final BookRepository bookRepository;
+    private final MemberRepository memberRepository; // 추가
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // 도서 상세 조회
@@ -76,22 +81,22 @@ public class BookService {
 
     // 도서 등록 + like 0 기본값 추가
     @Transactional
-    public Book create(BookCreateRequest request) {
+    public Book create(BookCreateRequest request, String email) {
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new MemberNotFoundException(email));
 
         Book book = new Book();
-
         book.setTitle(request.title());
         book.setAuthor(request.author());
         book.setGenre(request.genre());
         book.setContent(request.content());
         book.replaceTags(normalizeTagNames(request.tag()));
         book.setCoverImageUrl(request.coverImageUrl());
-
         book.setLikes(0);
+        book.setMember(member); // 등록자 저장
 
         return bookRepository.save(book);
     }
-
 
     @Transactional(readOnly = true)
     public Page<Book> getPage(int page, int size, String sortBy) {
@@ -107,8 +112,9 @@ public class BookService {
 
     // 도서 수정
     @Transactional
-    public Book update(Long id, BookUpdateRequest dto) {
+    public Book update(Long id, BookUpdateRequest dto, String email) {
         Book existing = findById(id);
+        checkOwner(existing, email); // 본인 확인
 
         if (existing.getDeletedAt() != null ) {
             throw new IllegalArgumentException("휴지통에 있는 도서는 수정할 수 없습니다.");
@@ -151,8 +157,9 @@ public class BookService {
 
     // 도서 휴지통 이동
     @Transactional
-    public Book moveToTrash(Long id) {
+    public Book moveToTrash(Long id, String email) {
         Book existing = findById(id);
+        checkOwner(existing, email); // 본인 확인
         if (existing.getDeletedAt() != null) {
             throw new IllegalArgumentException("이미 휴지통에 있는 도서입니다.");
         }
@@ -206,11 +213,17 @@ public class BookService {
 
     // 도서 영구 삭제
     @Transactional
-    public void deleteBook(Long id) {
-        if (bookRepository.existsById(id)) {
-            bookRepository.deleteById(id);
-        } else {
-            throw new BookNotFoundException(id);
+    public void deleteBook(Long id, String email) {
+        Book existing = findById(id);
+        checkOwner(existing, email); // 본인 확인
+        bookRepository.deleteById(id);
+    }
+
+    // 본인 도서 확인
+    private void checkOwner(Book book, String email) {
+        if (book.getMember() == null) return; // 기존 데이터 null이면 통과
+        if (!book.getMember().getEmail().equals(email)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 도서만 수정/삭제할 수 있습니다.");
         }
     }
 
@@ -265,10 +278,7 @@ public class BookService {
         for (Book book : getActiveBooks()) {
             for (BookTag tag : book.getTags()) {
                 String tagName = tag.getName();
-                if (tagName == null || tagName.isBlank()) {
-                    continue;
-                }
-
+                if (tagName == null || tagName.isBlank()) continue;
                 result.put(tagName, result.getOrDefault(tagName, 0L) + 1);
             }
         }
@@ -321,10 +331,7 @@ public class BookService {
             int likes = book.getLikes() != null ? book.getLikes() : 0;
             for (BookTag tag : book.getTags()) {
                 String tagName = tag.getName();
-                if (tagName == null || tagName.isBlank()) {
-                    continue;
-                }
-
+                if (tagName == null || tagName.isBlank()) continue;
                 result.put(tagName, result.getOrDefault(tagName, 0) + likes);
             }
         }
@@ -477,14 +484,11 @@ public class BookService {
         List<String> tags = normalizeSearchValues(request.tags());
 
         return bookRepository.searchBooks(
-                        normalizeSearchValue(request.keyword()),
-                        emptyListGuard(genres),
-                        genres.isEmpty(),
-                        emptyListGuard(tags),
-                        tags.isEmpty(),
-                        pageable
-                )
-                .map(BookSearchResponse::from);
+                normalizeSearchValue(request.keyword()),
+                emptyListGuard(genres), genres.isEmpty(),
+                emptyListGuard(tags), tags.isEmpty(),
+                pageable
+        ).map(BookSearchResponse::from);
     }
 
     // 인기 도서 조회
@@ -524,6 +528,7 @@ public class BookService {
         // JPQL의 IN 조건에 빈 리스트가 들어가지 않도록 더미 값을 넣어 쿼리 오류를 방지
         return values.isEmpty() ? List.of("__empty__") : values;
     }
+
     private List<String> normalizeTagNames(String value) {
         if (value == null) return List.of();
 
@@ -552,7 +557,8 @@ public class BookService {
 
             Map<String, Object> body = Map.of(
                     "model", "gpt-4o-mini",
-                    "messages", List.of(Map.of("role", "system", "content", "주어진 도서 내용을 바탕으로 한 문장의 한줄평을 작성하세요."),
+                    "messages", List.of(
+                            Map.of("role", "system", "content", "주어진 도서 내용을 바탕으로 한 문장의 한줄평을 작성하세요."),
                             Map.of("role", "user", "content", content))
             );
 
