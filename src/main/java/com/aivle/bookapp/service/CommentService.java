@@ -1,6 +1,5 @@
 package com.aivle.bookapp.service;
 
-import com.aivle.bookapp.domain.Book;
 import com.aivle.bookapp.domain.Comment;
 import com.aivle.bookapp.dto.CommentCreateRequest;
 import com.aivle.bookapp.dto.CommentUpdateRequest;

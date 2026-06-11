@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,7 +39,7 @@ class BookCoverServiceTest {
         book.setTitle("어린왕자");
         book.setAuthor("생텍쥐페리");
         book.setGenre("소설");
-        book.setTag("모험, 우정");
+        book.replaceTags(List.of("모험", "우정"));
         book.setContent("사막에서 만난 어린 왕자 이야기");
         book.setLikes(0);
     }
