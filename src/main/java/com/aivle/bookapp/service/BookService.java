@@ -2,11 +2,25 @@ package com.aivle.bookapp.service;
 
 import com.aivle.bookapp.domain.Book;
 import com.aivle.bookapp.domain.BookTag;
+import com.aivle.bookapp.domain.Member;
 import com.aivle.bookapp.dto.*;
 import com.aivle.bookapp.dto.AiBookSummaryRequest;
 import com.aivle.bookapp.dto.AiBookSummaryResponse;
 import com.aivle.bookapp.exception.BookNotFoundException;
+import com.aivle.bookapp.exception.MemberNotFoundException;
 import com.aivle.bookapp.exception.OpenAiException;
+import com.aivle.bookapp.repository.BookRepository;
+import com.aivle.bookapp.repository.MemberRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import javax.imageio.IIOImage;
@@ -19,27 +33,17 @@ import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.Base64;
-import com.aivle.bookapp.repository.BookRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.JsonNode;
-
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -53,6 +57,7 @@ public class BookService {
     private static final int MAX_POPULAR_LIMIT = 50;
 
     private final BookRepository bookRepository;
+    private final MemberRepository memberRepository; // 추가
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // 도서 상세 조회
@@ -67,24 +72,24 @@ public class BookService {
         return bookRepository.findAll();
     }
 
-    // 도서 등록 + like 0 기본값 추가
+    // 도서 등록
     @Transactional
-    public Book create(BookCreateRequest request) {
+    public Book create(BookCreateRequest request, String email) {
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new MemberNotFoundException(email));
 
         Book book = new Book();
-
         book.setTitle(request.title());
         book.setAuthor(request.author());
         book.setGenre(request.genre());
         book.setContent(request.content());
         book.replaceTags(normalizeTagNames(request.tag()));
         book.setCoverImageUrl(request.coverImageUrl());
-
         book.setLikes(0);
+        book.setMember(member); // 등록자 저장
 
         return bookRepository.save(book);
     }
-
 
     @Transactional(readOnly = true)
     public Page<Book> getPage(int page, int size, String sortBy) {
@@ -100,30 +105,17 @@ public class BookService {
 
     // 도서 수정
     @Transactional
-    public Book update(Long id, BookUpdateRequest dto) {
+    public Book update(Long id, BookUpdateRequest dto, String email) {
         Book existing = findById(id);
+        checkOwner(existing, email); // 본인 확인
 
-        if (dto.title() != null) {
-            existing.setTitle(dto.title());
-        }
-        if (dto.author() != null) {
-            existing.setAuthor(dto.author());
-        }
-        if (dto.genre() != null) {
-            existing.setGenre(dto.genre());
-        }
-        if (dto.content() != null) {
-            existing.setContent(dto.content());
-        }
-        if (dto.tag() != null) {
-            existing.replaceTags(normalizeTagNames(dto.tag()));
-        }
-        if (dto.coverImageUrl() != null) {
-            existing.setCoverImageUrl(dto.coverImageUrl());
-        }
-        if (dto.summary() != null) {
-            existing.setSummary(dto.summary());
-        }
+        if (dto.title() != null) existing.setTitle(dto.title());
+        if (dto.author() != null) existing.setAuthor(dto.author());
+        if (dto.genre() != null) existing.setGenre(dto.genre());
+        if (dto.content() != null) existing.setContent(dto.content());
+        if (dto.tag() != null) existing.replaceTags(normalizeTagNames(dto.tag()));
+        if (dto.coverImageUrl() != null) existing.setCoverImageUrl(dto.coverImageUrl());
+        if (dto.summary() != null) existing.setSummary(dto.summary());
         existing.setUpdatedAt(LocalDateTime.now());
 
         return bookRepository.save(existing);
@@ -131,8 +123,9 @@ public class BookService {
 
     // 도서 휴지통 이동
     @Transactional
-    public Book moveToTrash(Long id) {
+    public Book moveToTrash(Long id, String email) {
         Book existing = findById(id);
+        checkOwner(existing, email); // 본인 확인
         existing.setDeletedAt(LocalDateTime.now());
         existing.setUpdatedAt(LocalDateTime.now());
         return bookRepository.save(existing);
@@ -182,11 +175,17 @@ public class BookService {
 
     // 도서 영구 삭제
     @Transactional
-    public void deleteBook(Long id) {
-        if (bookRepository.existsById(id)) {
-            bookRepository.deleteById(id);
-        } else {
-            throw new BookNotFoundException(id);
+    public void deleteBook(Long id, String email) {
+        Book existing = findById(id);
+        checkOwner(existing, email); // 본인 확인
+        bookRepository.deleteById(id);
+    }
+
+    // 본인 도서 확인
+    private void checkOwner(Book book, String email) {
+        if (book.getMember() == null) return; // 기존 데이터 null이면 통과
+        if (!book.getMember().getEmail().equals(email)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 도서만 수정/삭제할 수 있습니다.");
         }
     }
 
@@ -210,47 +209,34 @@ public class BookService {
         }
 
         Map<String, Object> result = new HashMap<>();
-
         for (String t : type) {
             switch (t) {
                 case "genre" -> result.put("genre", getBookCountByGenre());
                 case "tag" -> result.put("tag", getBookCountByTag());
-                default -> throw new IllegalArgumentException(
-                        "type은 genre 또는 tag만 가능합니다."
-                );
+                default -> throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
             }
         }
-
         return result;
     }
 
-    // 장르별 도서 수 합계
     private Map<String, Long> getBookCountByGenre() {
         Map<String, Long> result = new HashMap<>();
-
         for (Book book : getActiveBooks()) {
             String genre = book.getGenre() != null ? book.getGenre() : "기타";
             result.put(genre, result.getOrDefault(genre, 0L) + 1);
         }
-
         return result;
     }
 
-    // 태그별 도서 수 합계
     private Map<String, Long> getBookCountByTag() {
         Map<String, Long> result = new HashMap<>();
-
         for (Book book : getActiveBooks()) {
             for (BookTag tag : book.getTags()) {
                 String tagName = tag.getName();
-                if (tagName == null || tagName.isBlank()) {
-                    continue;
-                }
-
+                if (tagName == null || tagName.isBlank()) continue;
                 result.put(tagName, result.getOrDefault(tagName, 0L) + 1);
             }
         }
-
         return result;
     }
 
@@ -265,54 +251,39 @@ public class BookService {
         }
 
         Map<String, Object> result = new HashMap<>();
-
         for (String t : type) {
             switch (t) {
                 case "genre" -> result.put("genre", getLikesCountByGenre());
                 case "tag" -> result.put("tag", getLikesCountByTag());
-                default -> throw new IllegalArgumentException(
-                        "type? genre ?먮뒗 tag留?媛?ν빀?덈떎."
-                );
+                default -> throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
             }
         }
-
         return result;
     }
 
-    // ?λⅤ蹂?醫뗭븘?????⑷퀎
     private Map<String, Integer> getLikesCountByGenre() {
         Map<String, Integer> result = new HashMap<>();
-
         for (Book book : getActiveBooks()) {
-            String genre = book.getGenre() != null ? book.getGenre() : "湲고?";
+            String genre = book.getGenre() != null ? book.getGenre() : "기타";
             int likes = book.getLikes() != null ? book.getLikes() : 0;
-
             result.put(genre, result.getOrDefault(genre, 0) + likes);
         }
-
         return result;
     }
 
-    // ?쒓렇蹂?醫뗭븘?????⑷퀎
     private Map<String, Integer> getLikesCountByTag() {
         Map<String, Integer> result = new HashMap<>();
-
         for (Book book : getActiveBooks()) {
             int likes = book.getLikes() != null ? book.getLikes() : 0;
             for (BookTag tag : book.getTags()) {
                 String tagName = tag.getName();
-                if (tagName == null || tagName.isBlank()) {
-                    continue;
-                }
-
+                if (tagName == null || tagName.isBlank()) continue;
                 result.put(tagName, result.getOrDefault(tagName, 0) + likes);
             }
         }
-
         return result;
     }
 
-    // AI 표지 이미지 생성 (OpenAI 호출 → 압축 → DB 저장)
     public Book generateCover(Long id, GenerateCoverRequest request) {
         Book book = findById(id);
         String prompt = buildPrompt(book);
@@ -380,11 +351,9 @@ public class BookService {
             body.put("output_format", "png");
 
             String jsonBody = objectMapper.writeValueAsString(body);
-
             HttpClient client = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(30))
                     .build();
-
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.openai.com/v1/images/generations"))
                     .header("Content-Type", "application/json")
@@ -392,7 +361,6 @@ public class BookService {
                     .timeout(Duration.ofSeconds(120))
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                     .build();
-
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 401) throw new OpenAiException(401, "API Key가 올바르지 않습니다.");
@@ -402,7 +370,6 @@ public class BookService {
             Map<String, Object> responseBody = objectMapper.readValue(response.body(), Map.class);
             List<Map<String, Object>> data = (List<Map<String, Object>>) responseBody.get("data");
             String b64Json = (String) data.get(0).get("b64_json");
-
             if (b64Json == null) throw new OpenAiException(500, "응답 형식 오류");
             return b64Json;
 
@@ -417,17 +384,14 @@ public class BookService {
         try {
             byte[] pngBytes = Base64.getDecoder().decode(b64Json);
             BufferedImage original = ImageIO.read(new ByteArrayInputStream(pngBytes));
-
             int maxWidth = 400;
             double scale = Math.min(1.0, (double) maxWidth / original.getWidth());
             int w = (int) (original.getWidth() * scale);
             int h = (int) (original.getHeight() * scale);
-
             BufferedImage resized = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
             Graphics2D g = resized.createGraphics();
             g.drawImage(original.getScaledInstance(w, h, Image.SCALE_SMOOTH), 0, 0, null);
             g.dispose();
-
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
             ImageWriteParam params = writer.getDefaultWriteParam();
@@ -437,29 +401,23 @@ public class BookService {
             writer.setOutput(ios);
             writer.write(null, new IIOImage(resized, null, null), params);
             writer.dispose();
-
             return "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(out.toByteArray());
         } catch (Exception e) {
             return "data:image/png;base64," + b64Json;
         }
     }
 
-
     // 도서 검색
     @Transactional(readOnly = true)
     public Page<BookSearchResponse> search(BookSearchRequest request, Pageable pageable) {
         List<String> genres = normalizeSearchValues(request.genres());
         List<String> tags = normalizeSearchValues(request.tags());
-
         return bookRepository.searchBooks(
-                        normalizeSearchValue(request.keyword()),
-                        emptyListGuard(genres),
-                        genres.isEmpty(),
-                        emptyListGuard(tags),
-                        tags.isEmpty(),
-                        pageable
-                )
-                .map(BookSearchResponse::from);
+                normalizeSearchValue(request.keyword()),
+                emptyListGuard(genres), genres.isEmpty(),
+                emptyListGuard(tags), tags.isEmpty(),
+                pageable
+        ).map(BookSearchResponse::from);
     }
 
     // 인기 도서 조회
@@ -473,20 +431,16 @@ public class BookService {
     }
 
     private int normalizeLimit(int limit) {
-        // 인기 도서 조회 개수를 기본값과 최대 허용값 사이로 제한
         if (limit <= 0) return DEFAULT_POPULAR_LIMIT;
         return Math.min(limit, MAX_POPULAR_LIMIT);
     }
 
     private String normalizeSearchValue(String value) {
-        // 검색 조건 비교를 위해 null, 앞뒤 공백, 대소문자 차이를 정리
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 
     private List<String> normalizeSearchValues(List<String> values) {
-        // 다중 쿼리 파라미터와 콤마로 묶인 값을 모두 동일한 리스트 조건으로 정리
         if (values == null) return List.of();
-
         return values.stream()
                 .flatMap(value -> List.of(value.split(",")).stream())
                 .map(this::normalizeSearchValue)
@@ -496,12 +450,11 @@ public class BookService {
     }
 
     private List<String> emptyListGuard(List<String> values) {
-        // JPQL의 IN 조건에 빈 리스트가 들어가지 않도록 더미 값을 넣어 쿼리 오류를 방지
         return values.isEmpty() ? List.of("__empty__") : values;
     }
+
     private List<String> normalizeTagNames(String value) {
         if (value == null) return List.of();
-
         return Arrays.stream(value.split("[,/]"))
                 .map(String::trim)
                 .filter(tagName -> !tagName.isBlank())
@@ -524,13 +477,12 @@ public class BookService {
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setRequestProperty("Authorization", "Bearer " + apiKey.trim());
             conn.setDoOutput(true);
-
             Map<String, Object> body = Map.of(
                     "model", "gpt-4o-mini",
-                    "messages", List.of(Map.of("role", "system", "content", "주어진 도서 내용을 바탕으로 한 문장의 한줄평을 작성하세요."),
+                    "messages", List.of(
+                            Map.of("role", "system", "content", "주어진 도서 내용을 바탕으로 한 문장의 한줄평을 작성하세요."),
                             Map.of("role", "user", "content", content))
             );
-
             try (OutputStream os = conn.getOutputStream()) {
                 os.write(objectMapper.writeValueAsBytes(body));
             }
@@ -540,12 +492,10 @@ public class BookService {
             if (responseCode != 200) throw new OpenAiException(responseCode, "OpenAI 오류: " + responseCode);
             JsonNode root = objectMapper.readTree(conn.getInputStream());
             return root.path("choices").get(0).path("message").path("content").asText();
-
         } catch (OpenAiException e) {
             throw e;
         } catch (Exception e) {
             throw new OpenAiException(500, "OpenAI API 호출 실패: " + e.getMessage());
         }
     }
-
 }

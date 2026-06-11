@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -51,6 +52,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
         Map<String, String> body = Map.of("error", "Bad Request", "message", e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    // 본인의 도서만 수정/삭제 예외처리
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleForbidden(ResponseStatusException e) {
+        Map<String, String> body = Map.of("error", "Forbidden", "message", e.getReason());
+        return ResponseEntity.status(e.getStatusCode()).body(body);
     }
 
 

@@ -59,6 +59,10 @@ public class Book {
     @Column
     private java.time.LocalDateTime deletedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", nullable = true)
+    private Member member;
+
     public void replaceTags(List<String> tagNames) {
         tags.clear();
 
