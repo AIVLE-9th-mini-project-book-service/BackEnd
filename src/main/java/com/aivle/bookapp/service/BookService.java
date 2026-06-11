@@ -3,6 +3,8 @@ package com.aivle.bookapp.service;
 import com.aivle.bookapp.domain.Book;
 import com.aivle.bookapp.domain.BookTag;
 import com.aivle.bookapp.dto.*;
+import com.aivle.bookapp.dto.AiBookSummaryRequest;
+import com.aivle.bookapp.dto.AiBookSummaryResponse;
 import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.exception.OpenAiException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -32,7 +34,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
 
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -516,4 +522,44 @@ public class BookService {
                 .distinct()
                 .toList();
     }
+
+    @Transactional
+    public AiBookSummaryResponse generateSummary(Long id, AiBookSummaryRequest request) {
+        Book book = findById(id);
+        String summary = callOpenAiApi(book.getContent(), request.apiKey());
+        return new AiBookSummaryResponse(summary);
+    }
+
+    private String callOpenAiApi(String content, String apiKey) {
+        try {
+            URL url = new URL("https://api.openai.com/v1/chat/completions");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Authorization", "Bearer " + apiKey.trim());
+            conn.setDoOutput(true);
+
+            Map<String, Object> body = Map.of(
+                    "model", "gpt-4o-mini",
+                    "messages", List.of(Map.of("role", "system", "content", "주어진 도서 내용을 바탕으로 한 문장의 한줄평을 작성하세요."),
+                            Map.of("role", "user", "content", content))
+            );
+
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(objectMapper.writeValueAsBytes(body));
+            }
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 401) throw new OpenAiException(401, "API Key가 올바르지 않습니다.");
+            if (responseCode == 429) throw new OpenAiException(429, "요청 한도 초과. 잠시 후 다시 시도해주세요.");
+            if (responseCode != 200) throw new OpenAiException(responseCode, "OpenAI 오류: " + responseCode);
+            JsonNode root = objectMapper.readTree(conn.getInputStream());
+            return root.path("choices").get(0).path("message").path("content").asText();
+
+        } catch (OpenAiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new OpenAiException(500, "OpenAI API 호출 실패: " + e.getMessage());
+        }
+    }
+
 }
