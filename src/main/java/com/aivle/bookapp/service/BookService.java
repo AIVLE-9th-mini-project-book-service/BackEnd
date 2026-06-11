@@ -1,6 +1,8 @@
 package com.aivle.bookapp.service;
 
 import com.aivle.bookapp.domain.Book;
+import com.aivle.bookapp.dto.AiBookSummaryRequest;
+import com.aivle.bookapp.dto.AiBookSummaryResponse;
 import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.repository.BookRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +12,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +28,7 @@ import java.util.Map;
 public class BookService {
 
     private final BookRepository bookRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     // 도서 상세 조회
     @Transactional(readOnly = true)
@@ -310,4 +318,48 @@ public class BookService {
 
         return likesCountResult;
     }
+
+    @Transactional(readOnly = true)
+    public AiBookSummaryResponse generateSummary(Long id, AiBookSummaryRequest request) {
+        Book book = findById(id);
+        String summary = callOpenAiApi(book.getContent(), request.apiKey());
+        return new AiBookSummaryResponse(summary);
+    }
+
+    private String callOpenAiApi(String content, String apiKey) {
+        try {
+            URL url = new URL("https://api.openai.com/v1/chat/completions");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Authorization", "Bearer " + apiKey.trim());
+            conn.setDoOutput(true);
+
+            Map<String, Object> body = Map.of(
+                    "model", "gpt-4o-mini",
+                    "messages", List.of(Map.of("role", "system", "content", "주어진 도서 내용을 바탕으로 한 문장의 한줄평을 작성하세요."),
+                            Map.of("role", "user", "content", content))
+            );
+
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(objectMapper.writeValueAsBytes(body));
+            }
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 429) {
+                // 이 에러가 뜨면 프론트가 429 코드를 보고 "잠시 대기" 화면을 띄울 수 있습니다.
+                throw new RuntimeException("AI 서버 요청 한도 초과(429): 잠시 후 다시 시도해주세요.");
+            } else if (responseCode != 200) {
+                throw new RuntimeException("AI 서버 오류 (코드: " + responseCode + ")");
+            }
+
+            JsonNode root = objectMapper.readTree(conn.getInputStream());
+            return root.path("choices").get(0).path("message").path("content").asText();
+
+        } catch (RuntimeException e) {
+            throw e; // 위에서 던진 429 에러는 그대로 던짐
+        } catch (Exception e) {
+            throw new RuntimeException("AI 요약 처리 중 예상치 못한 오류 발생: " + e.getMessage());
+        }
+    }
+
 }
