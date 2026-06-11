@@ -24,6 +24,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.Base64;
 import com.aivle.bookapp.repository.BookRepository;
@@ -409,21 +410,26 @@ public class BookService {
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() == 401) throw new OpenAiException(401, "API Key가 올바르지 않습니다.");
-            if (response.statusCode() == 429) throw new OpenAiException(429, "요청 한도 초과. 잠시 후 다시 시도해주세요.");
-            if (response.statusCode() != 200) throw new OpenAiException(response.statusCode(), "OpenAI 오류: " + response.statusCode());
+            if (response.statusCode() != 200) throw OpenAiException.from(response.statusCode(), response.body());
 
             Map<String, Object> responseBody = objectMapper.readValue(response.body(), Map.class);
             List<Map<String, Object>> data = (List<Map<String, Object>>) responseBody.get("data");
-            String b64Json = (String) data.get(0).get("b64_json");
 
-            if (b64Json == null) throw new OpenAiException(500, "응답 형식 오류");
+            if (data == null || data.isEmpty()) throw OpenAiException.missingData();
+
+            String b64Json = (String) data.get(0).get("b64_json");
+            if (b64Json == null) throw OpenAiException.missingImage();
             return b64Json;
 
         } catch (OpenAiException e) {
             throw e;
+        } catch (HttpTimeoutException e) {
+            throw OpenAiException.timeout();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw OpenAiException.interrupted();
         } catch (Exception e) {
-            throw new OpenAiException(500, "OpenAI API 호출 실패: " + e.getMessage());
+            throw OpenAiException.callFailed(e);
         }
     }
 
