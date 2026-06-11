@@ -4,6 +4,7 @@ import com.aivle.bookapp.domain.Comment;
 import com.aivle.bookapp.dto.CommentCreateRequest;
 import com.aivle.bookapp.dto.CommentUpdateRequest;
 import com.aivle.bookapp.exception.BookNotFoundException;
+import com.aivle.bookapp.exception.CommentNotFoundException;
 import com.aivle.bookapp.repository.BookRepository;
 import com.aivle.bookapp.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
@@ -49,16 +50,16 @@ public class CommentService {
     @Transactional(readOnly = true)
     public Comment findById(Long id){
         return commentRepository.findById(id).orElseThrow(()
-                ->new BookNotFoundException(id));
+                ->new CommentNotFoundException(id));
     }
 
     //도서 후기 수정
     @Transactional
     public Comment commentUpdate(Long id, CommentUpdateRequest dto) {
         Comment existing = findById(id);
-        if (existing == null) {
-            throw new NoSuchElementException("해당 도서 후기를 찾을 수 없습니다.");
-        }
+//        if (existing == null) {
+//            throw new NoSuchElementException("해당 도서 후기를 찾을 수 없습니다.");
+//        }
 
 
         if (dto.password() == null || !existing.getPassword().equals(dto.password())) {
