@@ -34,7 +34,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -510,7 +509,7 @@ public class BookService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AiBookSummaryResponse generateSummary(Long id, AiBookSummaryRequest request) {
         Book book = findById(id);
         String summary = callOpenAiApi(book.getContent(), request.apiKey());
@@ -536,20 +535,16 @@ public class BookService {
                 os.write(objectMapper.writeValueAsBytes(body));
             }
             int responseCode = conn.getResponseCode();
-            if (responseCode == 429) {
-                // 이 에러가 뜨면 프론트가 429 코드를 보고 "잠시 대기" 화면을 띄울 수 있습니다.
-                throw new RuntimeException("AI 서버 요청 한도 초과(429): 잠시 후 다시 시도해주세요.");
-            } else if (responseCode != 200) {
-                throw new RuntimeException("AI 서버 오류 (코드: " + responseCode + ")");
-            }
-
+            if (responseCode == 401) throw new OpenAiException(401, "API Key가 올바르지 않습니다.");
+            if (responseCode == 429) throw new OpenAiException(429, "요청 한도 초과. 잠시 후 다시 시도해주세요.");
+            if (responseCode != 200) throw new OpenAiException(responseCode, "OpenAI 오류: " + responseCode);
             JsonNode root = objectMapper.readTree(conn.getInputStream());
             return root.path("choices").get(0).path("message").path("content").asText();
 
-        } catch (RuntimeException e) {
-            throw e; // 위에서 던진 429 에러는 그대로 던짐
+        } catch (OpenAiException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("AI 요약 처리 중 예상치 못한 오류 발생: " + e.getMessage());
+            throw new OpenAiException(500, "OpenAI API 호출 실패: " + e.getMessage());
         }
     }
 

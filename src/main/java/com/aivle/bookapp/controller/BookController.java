@@ -133,22 +133,23 @@ public class BookController {
         );
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
+
     // AI 한줄평 생성
     @PostMapping("/books/{id}/summary/generate")
     public ResponseEntity<AiBookSummaryResponse> generateSummary(
             @PathVariable Long id,
             @Valid @RequestBody AiBookSummaryRequest request) {
 
-        // bookService에 생성 로직을 위임합니다.
+
         AiBookSummaryResponse response = bookService.generateSummary(id, request);
         return ResponseEntity.ok(response);
     }
+
     // 한줄평 저장
     @PatchMapping("/books/{id}/summary")
     public Book saveSummary(@PathVariable Long id, @RequestParam String summary) {
         return bookService.saveSummary(id, summary);
     }
-
     // 도서 영구 삭제
     @DeleteMapping("/books/{id}")
     public ResponseEntity<Map<String, Object>> deleteBook(@PathVariable Long id) {
