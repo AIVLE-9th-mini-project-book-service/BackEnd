@@ -22,6 +22,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
+    @ExceptionHandler({OpenAiException.class})
+    public ResponseEntity<Map<String, String>> handleOpenAiException(OpenAiException e) {
+        Map<String, String> body = Map.of("error", "OpenAI Error", "message", e.getMessage());
+        return ResponseEntity.status(e.getStatusCode()).body(body);
+    }
+
     // 로그인 회원가입 예외처리 추가
     @ExceptionHandler(MemberNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleMemberNotFound(MemberNotFoundException e) {

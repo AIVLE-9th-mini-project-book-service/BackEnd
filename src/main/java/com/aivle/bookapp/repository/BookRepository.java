@@ -1,7 +1,6 @@
 package com.aivle.bookapp.repository;
 
 import com.aivle.bookapp.domain.Book;
-import com.aivle.bookapp.domain.BookTag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,8 +17,6 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<Book> findByTitleAndAuthor(String title, String author);
 
     List<Book> findByTitleContainingOrAuthorContaining(String keyword, String keyword1);
-
-    List<Book> findByGenreAndTag(String genre, String tag);
 
     @Modifying
     @Query("UPDATE Book b SET b.likes = b.likes + 1 WHERE b.id = :id")

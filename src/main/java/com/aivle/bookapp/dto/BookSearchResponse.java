@@ -18,7 +18,7 @@ public record BookSearchResponse(
                 book.getTitle(),
                 book.getAuthor(),
                 book.getGenre(),
-                book.getTag(),
+                book.getTagText(),
                 book.getSummary(),
                 book.getCoverImageUrl(),
                 book.getLikes()
