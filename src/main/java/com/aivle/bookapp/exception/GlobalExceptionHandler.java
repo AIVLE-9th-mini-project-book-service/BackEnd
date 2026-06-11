@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -35,5 +36,39 @@ public class GlobalExceptionHandler {
         Map<String, String> body = Map.of("error", "OpenAI Error", "message", e.getMessage());
         return ResponseEntity.status(e.getStatusCode()).body(body);
     }
+
+    // 로그인 회원가입 예외처리 추가
+    @ExceptionHandler(MemberNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleMemberNotFound(MemberNotFoundException e) {
+        Map<String, String> body = Map.of("error", "Not Found", "message", e.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicateEmail(DuplicateEmailException e) {
+        Map<String, String> body = Map.of("error", "Bad Request", "message", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(InvalidPasswordException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidPassword(InvalidPasswordException e) {
+        Map<String, String> body = Map.of("error", "Bad Request", "message", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
+        Map<String, String> body = Map.of("error", "Bad Request", "message", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    // 본인의 도서만 수정/삭제 예외처리
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleForbidden(ResponseStatusException e) {
+        Map<String, String> body = Map.of("error", "Forbidden", "message", e.getReason());
+        return ResponseEntity.status(e.getStatusCode()).body(body);
+    }
+
+
 
 }

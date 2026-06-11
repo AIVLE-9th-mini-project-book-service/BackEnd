@@ -58,13 +58,16 @@ public class Book {
     @Column
     private java.time.LocalDateTime deletedAt;
 
-    // books에서 tag 칼럼 삭제 -> book_tags 테이블로 분리
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BookTag> tags = new ArrayList<>();
 
     @JsonIgnore
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", nullable = true)
+    private Member member;
 
     public void replaceTags(List<String> tagNames) {
         tags.clear();

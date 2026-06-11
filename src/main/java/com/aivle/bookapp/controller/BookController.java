@@ -11,6 +11,7 @@ import com.aivle.bookapp.dto.GenerateCoverRequest;
 import com.aivle.bookapp.dto.BookUpdateRequest;
 import com.aivle.bookapp.dto.GenerateCoverResponse;
 import com.aivle.bookapp.service.BookService;
+import com.aivle.bookapp.util.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -32,6 +33,7 @@ import java.util.Map;
 public class BookController {
 
     private final BookService bookService;
+    private final JwtUtil jwtUtil;
 
     // 도서 목록 조회
     @Operation(summary = "도서 목록", description = "등록된 전체 도서를 조회합니다.")
@@ -50,9 +52,11 @@ public class BookController {
     // 도서 등록
     @Operation(summary = "신규 도서 등록", description = "신규 도서를 등록합니다.")
     @PostMapping("/books")
-    public ResponseEntity<Book> createBook(@Valid @RequestBody BookCreateRequest request) {
-        Book saved = bookService.create(request);
-
+    public ResponseEntity<Book> createBook(
+            @Valid @RequestBody BookCreateRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        String email = jwtUtil.getEmail(authHeader.substring(7));
+        Book saved = bookService.create(request, email);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
@@ -61,8 +65,7 @@ public class BookController {
     @GetMapping("/books/search")
     public Page<BookSearchResponse> searchBooks(
             @ModelAttribute BookSearchRequest request,
-            @PageableDefault(size = 20) Pageable pageable
-    ) {
+            @PageableDefault(size = 20) Pageable pageable) {
         return bookService.search(request, pageable);
     }
 
@@ -93,8 +96,12 @@ public class BookController {
     // 도서 수정
     @Operation(summary = "도서 수정", description = "도서 정보를 수정합니다.")
     @PatchMapping("/books/{id}")
-    public ResponseEntity<Map<String, Object>> updateBook(@PathVariable Long id, @RequestBody BookUpdateRequest dto) {
-        Book updatedBook = bookService.update(id, dto);
+    public ResponseEntity<Map<String, Object>> updateBook(
+            @PathVariable Long id,
+            @RequestBody BookUpdateRequest dto,
+            @RequestHeader("Authorization") String authHeader) {
+        String email = jwtUtil.getEmail(authHeader.substring(7));
+        Book updatedBook = bookService.update(id, dto, email);
         Map<String, Object> body = Map.of(
                 "id", updatedBook.getId(),
                 "message", "도서 수정 성공"
@@ -105,11 +112,12 @@ public class BookController {
     // 도서 삭제(휴지통 이동)
     @Operation(summary = "도서 삭제", description = "도서를 휴지통으로 이동합니다.")
     @PatchMapping("/books/trash/{id}")
-    public ResponseEntity<Map<String, Object>> moveToTrash(@PathVariable Long id) {
-        bookService.moveToTrash(id);
-        Map<String, Object> body = Map.of(
-                "message", "도서 삭제 성공"
-        );
+    public ResponseEntity<Map<String, Object>> moveToTrash(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        String email = jwtUtil.getEmail(authHeader.substring(7));
+        bookService.moveToTrash(id, email);
+        Map<String, Object> body = Map.of("message", "도서 삭제 성공");
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
@@ -118,9 +126,7 @@ public class BookController {
     @PatchMapping("/books/restore/{id}")
     public ResponseEntity<Map<String, Object>> restore(@PathVariable Long id) {
         bookService.restore(id);
-        Map<String, Object> body = Map.of(
-                "message", "도서 복원 성공"
-        );
+        Map<String, Object> body = Map.of("message", "도서 복원 성공");
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
@@ -150,7 +156,9 @@ public class BookController {
     // AI 표지 이미지 저장
     @Operation(summary = "AI 표지 이미지 저장", description = "생성된 AI 표지 이미지를 저장합니다.")
     @PatchMapping("/books/{id}/cover")
-    public ResponseEntity<Map<String, Object>> saveImgUrl(@PathVariable Long id, @Valid @RequestBody CoverImageUpdateRequest request) {
+    public ResponseEntity<Map<String, Object>> saveImgUrl(
+            @PathVariable Long id,
+            @Valid @RequestBody CoverImageUpdateRequest request) {
         Book updatedBook = bookService.saveImgUrl(id, request);
         Map<String, Object> body = Map.of(
                 "id", updatedBook.getId(),
@@ -178,27 +186,28 @@ public class BookController {
     public Book saveSummary(@PathVariable Long id, @RequestParam String summary) {
         return bookService.saveSummary(id, summary);
     }
+
     // 도서 영구 삭제
     @Operation(summary = "도서 영구 삭제", description = "도서를 DB에서 완전히 삭제합니다.")
     @DeleteMapping("/books/{id}")
-    public ResponseEntity<Map<String, Object>> deleteBook(@PathVariable Long id) {
-        bookService.deleteBook(id);
-        Map<String, Object> body = Map.of(
-                "message", "도서 영구 삭제 성공"
-        );
+    public ResponseEntity<Map<String, Object>> deleteBook(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        String email = jwtUtil.getEmail(authHeader.substring(7));
+        bookService.deleteBook(id, email);
+        Map<String, Object> body = Map.of("message", "도서 영구 삭제 성공");
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
-    //도서 수 통계
+    // 도서 수 통계
     @Operation(summary = "도서 수 통계", description = "도서 수를 통계냅니다.")
     @GetMapping("/books/statistics/count")
     public ResponseEntity<Map<String, Object>> getBookCountStatistics(
-            @RequestParam(required = false) List<String> type
-    ) {
+            @RequestParam(required = false) List<String> type) {
         return ResponseEntity.ok(bookService.getBookCountStatistics(type));
     }
 
-    //좋아요 수 통계
+    // 좋아요 수 통계
     @Operation(summary = "좋아요 수 통계", description = "좋아요 수를 통계냅니다.")
     @GetMapping("/books/statistics/likes")
     public ResponseEntity<Map<String, Object>> getLikesCountStatistics(
