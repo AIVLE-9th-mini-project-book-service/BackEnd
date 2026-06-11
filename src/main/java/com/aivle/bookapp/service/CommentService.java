@@ -27,7 +27,7 @@ public class CommentService {
     // 후기 등록
     public Comment createComment(Long bookId, CommentCreateRequest request) {
         Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new BookNotFoundException(bookId));
+                .orElseThrow(() -> new CommentNotFoundException(bookId));
 
         Comment comment = new Comment();
 
@@ -59,9 +59,9 @@ public class CommentService {
     @Transactional
     public Comment commentUpdate(Long id, CommentUpdateRequest dto) {
         Comment existing = findById(id);
-//        if (existing == null) {
-//            throw new NoSuchElementException("해당 도서 후기를 찾을 수 없습니다.");
-//        }
+        if (existing == null) {
+            throw new NoSuchElementException("해당 도서 후기를 찾을 수 없습니다.");
+        }
 
 
         if (dto.password() == null || !existing.getPassword().equals(dto.password())) {
@@ -80,7 +80,7 @@ public class CommentService {
         if(commentRepository.existsById(id)){
             commentRepository.deleteById(id);
         }else{
-            throw new BookNotFoundException(id);
+            throw new CommentNotFoundException(id);
         }
     }
 }
