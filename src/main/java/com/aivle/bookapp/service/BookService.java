@@ -7,6 +7,7 @@ import com.aivle.bookapp.dto.AiBookSummaryRequest;
 import com.aivle.bookapp.dto.AiBookSummaryResponse;
 import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.exception.OpenAiException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import tools.jackson.databind.ObjectMapper;
 
 import javax.imageio.IIOImage;
@@ -23,6 +24,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.Base64;
 import com.aivle.bookapp.repository.BookRepository;
@@ -103,13 +105,26 @@ public class BookService {
     public Book update(Long id, BookUpdateRequest dto) {
         Book existing = findById(id);
 
+        if (existing.getDeletedAt() != null ) {
+            throw new IllegalArgumentException("휴지통에 있는 도서는 수정할 수 없습니다.");
+        }
+
         if (dto.title() != null) {
+            if (dto.title().isBlank()) {
+                throw new IllegalArgumentException("제목은 비워둘 수 없습니다.");
+            }
             existing.setTitle(dto.title());
         }
         if (dto.author() != null) {
+            if (dto.author().isBlank()) {
+                throw new IllegalArgumentException("저자명은 비워둘 수 없습니다.");
+            }
             existing.setAuthor(dto.author());
         }
         if (dto.genre() != null) {
+            if (dto.genre().isBlank()) {
+                throw new IllegalArgumentException("장르는 비워둘 수 없습니다.");
+            }
             existing.setGenre(dto.genre());
         }
         if (dto.content() != null) {
@@ -133,6 +148,9 @@ public class BookService {
     @Transactional
     public Book moveToTrash(Long id) {
         Book existing = findById(id);
+        if (existing.getDeletedAt() != null) {
+            throw new IllegalArgumentException("이미 휴지통에 있는 도서입니다.");
+        }
         existing.setDeletedAt(LocalDateTime.now());
         existing.setUpdatedAt(LocalDateTime.now());
         return bookRepository.save(existing);
@@ -166,8 +184,9 @@ public class BookService {
     // 좋아요 +1
     @Transactional
     public void likeBook(Long id) {
-        if (!bookRepository.existsById(id)) {
-            throw new BookNotFoundException(id);
+        Book existing = findById(id);
+        if (existing.getDeletedAt() != null) {
+            throw new IllegalArgumentException("삭제된 도서에는 좋아요를 누를 수 없습니다.");
         }
         bookRepository.incrementLikes(id);
     }
@@ -215,9 +234,7 @@ public class BookService {
             switch (t) {
                 case "genre" -> result.put("genre", getBookCountByGenre());
                 case "tag" -> result.put("tag", getBookCountByTag());
-                default -> throw new IllegalArgumentException(
-                        "type은 genre 또는 tag만 가능합니다."
-                );
+                default -> throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
             }
         }
 
@@ -270,16 +287,14 @@ public class BookService {
             switch (t) {
                 case "genre" -> result.put("genre", getLikesCountByGenre());
                 case "tag" -> result.put("tag", getLikesCountByTag());
-                default -> throw new IllegalArgumentException(
-                        "type은 genre 또는 tag만 가능합니다."
-                );
+                default -> throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
             }
         }
 
         return result;
     }
 
-    // ?λⅤ蹂?醫뗭븘?????⑷퀎
+    // 장르별 좋아요 수 합계
     private Map<String, Integer> getLikesCountByGenre() {
         Map<String, Integer> result = new HashMap<>();
 
@@ -395,21 +410,26 @@ public class BookService {
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() == 401) throw new OpenAiException(401, "API Key가 올바르지 않습니다.");
-            if (response.statusCode() == 429) throw new OpenAiException(429, "요청 한도 초과. 잠시 후 다시 시도해주세요.");
-            if (response.statusCode() != 200) throw new OpenAiException(response.statusCode(), "OpenAI 오류: " + response.statusCode());
+            if (response.statusCode() != 200) throw OpenAiException.from(response.statusCode(), response.body());
 
             Map<String, Object> responseBody = objectMapper.readValue(response.body(), Map.class);
             List<Map<String, Object>> data = (List<Map<String, Object>>) responseBody.get("data");
-            String b64Json = (String) data.get(0).get("b64_json");
 
-            if (b64Json == null) throw new OpenAiException(500, "응답 형식 오류");
+            if (data == null || data.isEmpty()) throw OpenAiException.missingData();
+
+            String b64Json = (String) data.get(0).get("b64_json");
+            if (b64Json == null) throw OpenAiException.missingImage();
             return b64Json;
 
         } catch (OpenAiException e) {
             throw e;
+        } catch (HttpTimeoutException e) {
+            throw OpenAiException.timeout();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw OpenAiException.interrupted();
         } catch (Exception e) {
-            throw new OpenAiException(500, "OpenAI API 호출 실패: " + e.getMessage());
+            throw OpenAiException.callFailed(e);
         }
     }
 

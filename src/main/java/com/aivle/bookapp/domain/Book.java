@@ -23,15 +23,15 @@ public class Book {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank
+    @NotBlank(message = "제목은 필수입니다.")
     @Column(nullable = false, length = 200)
     private String title;
 
-    @NotBlank
+    @NotBlank(message = "저자는 필수입니다.")
     @Column(nullable = false)
     private String author;
 
-    @NotBlank
+    @NotBlank(message = "장르는 필수입니다.")
     @Column(nullable = false)
     private String genre;
 
