@@ -4,13 +4,13 @@ import jakarta.validation.constraints.NotBlank;
 
 public record BookCreateRequest(
 
-        @NotBlank
+        @NotBlank(message = "제목은 필수입니다.")
         String title,
 
-        @NotBlank
+        @NotBlank(message = "저자명은 필수입니다.")
         String author,
 
-        @NotBlank
+        @NotBlank(message = "장르는 필수입니다.")
         String genre,
 
         String content,
