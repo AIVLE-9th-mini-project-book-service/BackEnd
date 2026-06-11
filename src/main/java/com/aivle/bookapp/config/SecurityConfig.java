@@ -42,7 +42,8 @@ public class SecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/members/signup", "/members/login").permitAll()
+                        .requestMatchers("/members/signup", "/members/login", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+
                         .requestMatchers(HttpMethod.GET, "/books/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/books/*/comments").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/comments/*").permitAll() // 추가
