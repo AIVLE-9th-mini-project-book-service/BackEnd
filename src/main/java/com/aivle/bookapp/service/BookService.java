@@ -68,6 +68,11 @@ public class BookService {
     public List<Book> findAll() {
         return bookRepository.findAll();
     }
+    // 도서 삭제 목록 조회
+    @Transactional(readOnly = true)
+    public List<Book> findAllByDeleted() {
+        return bookRepository.findAllByDeletedAtIsNotNull();
+    }
 
     // 도서 등록 + like 0 기본값 추가
     @Transactional

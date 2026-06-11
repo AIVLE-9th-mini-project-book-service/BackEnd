@@ -73,6 +73,13 @@ public class BookController {
         return bookService.getPopularBooks(limit);
     }
 
+    // 도서 삭제 목록 조회
+    @Operation(summary = "도서 삭제 목록", description = "삭제된 전체 도서를 조회합니다.")
+    @GetMapping("/books/trash")
+    public List<Book> findAllDeletedBooks() {
+        return bookService.findAllByDeleted();
+    }
+
     @GetMapping("/books/page")
     public Page<Book> getPage(@RequestParam int page, @RequestParam int size, @RequestParam String sortBy) {
         return bookService.getPage(page, size, sortBy);
