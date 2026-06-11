@@ -20,7 +20,7 @@ spring:
         format_sql: true
   sql:
     init:
-      mode: never                          # ddl-auto: update로 변경 시 never로 함께 변경
+      mode: never               # ddl-auto: update로 변경 시 never로 함께 변경
 
 cors:
   allowed-origins: "http://localhost:5173"
