@@ -7,6 +7,7 @@ import com.aivle.bookapp.dto.AiBookSummaryRequest;
 import com.aivle.bookapp.dto.AiBookSummaryResponse;
 import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.exception.OpenAiException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import tools.jackson.databind.ObjectMapper;
 
 import javax.imageio.IIOImage;
@@ -104,13 +105,26 @@ public class BookService {
     public Book update(Long id, BookUpdateRequest dto) {
         Book existing = findById(id);
 
+        if (existing.getDeletedAt() != null ) {
+            throw new IllegalArgumentException("휴지통에 있는 도서는 수정할 수 없습니다.");
+        }
+
         if (dto.title() != null) {
+            if (dto.title().isBlank()) {
+                throw new IllegalArgumentException("제목은 비워둘 수 없습니다.");
+            }
             existing.setTitle(dto.title());
         }
         if (dto.author() != null) {
+            if (dto.author().isBlank()) {
+                throw new IllegalArgumentException("저자명은 비워둘 수 없습니다.");
+            }
             existing.setAuthor(dto.author());
         }
         if (dto.genre() != null) {
+            if (dto.genre().isBlank()) {
+                throw new IllegalArgumentException("장르는 비워둘 수 없습니다.");
+            }
             existing.setGenre(dto.genre());
         }
         if (dto.content() != null) {
@@ -134,6 +148,9 @@ public class BookService {
     @Transactional
     public Book moveToTrash(Long id) {
         Book existing = findById(id);
+        if (existing.getDeletedAt() != null) {
+            throw new IllegalArgumentException("이미 휴지통에 있는 도서입니다.");
+        }
         existing.setDeletedAt(LocalDateTime.now());
         existing.setUpdatedAt(LocalDateTime.now());
         return bookRepository.save(existing);
@@ -167,8 +184,9 @@ public class BookService {
     // 좋아요 +1
     @Transactional
     public void likeBook(Long id) {
-        if (!bookRepository.existsById(id)) {
-            throw new BookNotFoundException(id);
+        Book existing = findById(id);
+        if (existing.getDeletedAt() != null) {
+            throw new IllegalArgumentException("삭제된 도서에는 좋아요를 누를 수 없습니다.");
         }
         bookRepository.incrementLikes(id);
     }
@@ -216,9 +234,7 @@ public class BookService {
             switch (t) {
                 case "genre" -> result.put("genre", getBookCountByGenre());
                 case "tag" -> result.put("tag", getBookCountByTag());
-                default -> throw new IllegalArgumentException(
-                        "type은 genre 또는 tag만 가능합니다."
-                );
+                default -> throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
             }
         }
 
@@ -271,21 +287,19 @@ public class BookService {
             switch (t) {
                 case "genre" -> result.put("genre", getLikesCountByGenre());
                 case "tag" -> result.put("tag", getLikesCountByTag());
-                default -> throw new IllegalArgumentException(
-                        "type? genre ?먮뒗 tag留?媛?ν빀?덈떎."
-                );
+                default -> throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
             }
         }
 
         return result;
     }
 
-    // ?λⅤ蹂?醫뗭븘?????⑷퀎
+    // 장르별 좋아요 수 합계
     private Map<String, Integer> getLikesCountByGenre() {
         Map<String, Integer> result = new HashMap<>();
 
         for (Book book : getActiveBooks()) {
-            String genre = book.getGenre() != null ? book.getGenre() : "湲고?";
+            String genre = book.getGenre() != null ? book.getGenre() : "기타";
             int likes = book.getLikes() != null ? book.getLikes() : 0;
 
             result.put(genre, result.getOrDefault(genre, 0) + likes);
@@ -294,7 +308,7 @@ public class BookService {
         return result;
     }
 
-    // ?쒓렇蹂?醫뗭븘?????⑷퀎
+    // 태그별 좋아요 수 합계
     private Map<String, Integer> getLikesCountByTag() {
         Map<String, Integer> result = new HashMap<>();
 
