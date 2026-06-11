@@ -265,7 +265,7 @@ public class BookService {
                 case "genre" -> result.put("genre", getLikesCountByGenre());
                 case "tag" -> result.put("tag", getLikesCountByTag());
                 default -> throw new IllegalArgumentException(
-                        "type? genre ?먮뒗 tag留?媛?ν빀?덈떎."
+                        "type은 genre 또는 tag만 가능합니다."
                 );
             }
         }
@@ -278,7 +278,7 @@ public class BookService {
         Map<String, Integer> result = new HashMap<>();
 
         for (Book book : getActiveBooks()) {
-            String genre = book.getGenre() != null ? book.getGenre() : "湲고?";
+            String genre = book.getGenre() != null ? book.getGenre() : "기타";
             int likes = book.getLikes() != null ? book.getLikes() : 0;
 
             result.put(genre, result.getOrDefault(genre, 0) + likes);
@@ -287,7 +287,7 @@ public class BookService {
         return result;
     }
 
-    // ?쒓렇蹂?醫뗭븘?????⑷퀎
+    // 태그별 좋아요 수 합계
     private Map<String, Integer> getLikesCountByTag() {
         Map<String, Integer> result = new HashMap<>();
 
