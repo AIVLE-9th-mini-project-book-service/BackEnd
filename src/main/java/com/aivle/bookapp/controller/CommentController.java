@@ -1,6 +1,8 @@
 package com.aivle.bookapp.controller;
 
 import com.aivle.bookapp.domain.Comment;
+import com.aivle.bookapp.dto.CommentCreateRequest;
+import com.aivle.bookapp.dto.CommentUpdateRequest;
 import com.aivle.bookapp.service.CommentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,22 +21,23 @@ public class CommentController {
 
     // 후기 등록
     @PostMapping("/books/{bookId}/comments")
-    public ResponseEntity<Comment> createComment(@PathVariable Long bookId, @RequestBody Comment comment) {
-        Comment saved = commentService.createComment(bookId, comment);
+    public ResponseEntity<Comment> createComment(@PathVariable Long bookId, @RequestBody CommentCreateRequest request) {
+        Comment saved = commentService.createComment(bookId, request);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     // 도서 후기 수정
     @PatchMapping("/comments/{id}")
-    public ResponseEntity<Map<String, Object>> commentUpdate(@PathVariable Long id, @RequestBody Comment comment) {
-        if (comment.getText() == null || comment.getPassword() == null) {
+    public ResponseEntity<Map<String, Object>> commentUpdate(@PathVariable Long id, @RequestBody CommentUpdateRequest dto) {
+        if (dto.text() == null || dto.password() == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
                     "status", 400,
                     "message", "수정할 내용과 비밀번호를 모두 입력해주세요."
             ));
         }
 
-        Comment updatedComment = commentService.commentUpdate(id, comment);
+        Comment updatedComment = commentService.commentUpdate(id, dto);
         Map<String, Object> body = Map.of(
                 "id", updatedComment.getId(),
                 "text", updatedComment.getText()

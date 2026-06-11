@@ -1,9 +1,30 @@
 package com.aivle.bookapp.service;
 
 import com.aivle.bookapp.domain.Book;
+import com.aivle.bookapp.domain.BookTag;
+import com.aivle.bookapp.dto.*;
 import com.aivle.bookapp.dto.AiBookSummaryRequest;
 import com.aivle.bookapp.dto.AiBookSummaryResponse;
 import com.aivle.bookapp.exception.BookNotFoundException;
+import com.aivle.bookapp.exception.OpenAiException;
+import tools.jackson.databind.ObjectMapper;
+
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.Base64;
 import com.aivle.bookapp.repository.BookRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,13 +40,18 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class BookService {
+
+    private static final int DEFAULT_POPULAR_LIMIT = 5;
+    private static final int MAX_POPULAR_LIMIT = 50;
 
     private final BookRepository bookRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -44,49 +70,22 @@ public class BookService {
 
     // 도서 등록 + like 0 기본값 추가
     @Transactional
-    public Book create(Book book) {
-        if (book.getLikes() == null) {
-            book.setLikes(0);
-        }
+    public Book create(BookCreateRequest request) {
+
+        Book book = new Book();
+
+        book.setTitle(request.title());
+        book.setAuthor(request.author());
+        book.setGenre(request.genre());
+        book.setContent(request.content());
+        book.replaceTags(normalizeTagNames(request.tag()));
+        book.setCoverImageUrl(request.coverImageUrl());
+
+        book.setLikes(0);
+
         return bookRepository.save(book);
     }
 
-    // 기본 검색 (제목 OR 저자)
-    @Transactional(readOnly = true)
-    public List<Book> searchBooks(String keyword) {
-        return bookRepository.findByTitleContainingOrAuthorContaining(keyword, keyword);
-    }
-
-    // 제목 검색
-    @Transactional(readOnly = true)
-    public List<Book> searchByTitle(String title) {
-        return bookRepository.findByTitle(title);
-    }
-
-    // 제목 키워드 검색
-    @Transactional(readOnly = true)
-    public List<Book> searchByKeyword(String keyword) {
-        return bookRepository.findByTitleContaining(keyword);
-    }
-
-    // 제목 + 저자 검색
-    @Transactional(readOnly = true)
-    public List<Book> searchByTitleAndAuthor(String title, String author) {
-        return bookRepository.findByTitleAndAuthor(title, author);
-    }
-
-    // 저자별 도서 제목 조회
-    @Transactional(readOnly = true)
-    public List<String> authorGetTitle(String author) {
-        List<Book> books = bookRepository.findByAuthor(author);
-        return books.stream().map(Book::getTitle).toList();
-    }
-
-    // 상세 검색 (장르 AND 태그)
-    @Transactional(readOnly = true)
-    public List<Book> searchDetail(String genre, String tag) {
-        return bookRepository.findByGenreAndTag(genre, tag);
-    }
 
     @Transactional(readOnly = true)
     public Page<Book> getPage(int page, int size, String sortBy) {
@@ -102,29 +101,29 @@ public class BookService {
 
     // 도서 수정
     @Transactional
-    public Book update(Long id, Book book) {
+    public Book update(Long id, BookUpdateRequest dto) {
         Book existing = findById(id);
 
-        if (book.getTitle() != null) {
-            existing.setTitle(book.getTitle());
+        if (dto.title() != null) {
+            existing.setTitle(dto.title());
         }
-        if (book.getAuthor() != null) {
-            existing.setAuthor(book.getAuthor());
+        if (dto.author() != null) {
+            existing.setAuthor(dto.author());
         }
-        if (book.getGenre() != null) {
-            existing.setGenre(book.getGenre());
+        if (dto.genre() != null) {
+            existing.setGenre(dto.genre());
         }
-        if (book.getContent() != null) {
-            existing.setContent(book.getContent());
+        if (dto.content() != null) {
+            existing.setContent(dto.content());
         }
-        if (book.getTag() != null) {
-            existing.setTag(book.getTag());
+        if (dto.tag() != null) {
+            existing.replaceTags(normalizeTagNames(dto.tag()));
         }
-        if (book.getCoverImageUrl() != null) {
-            existing.setCoverImageUrl(book.getCoverImageUrl());
+        if (dto.coverImageUrl() != null) {
+            existing.setCoverImageUrl(dto.coverImageUrl());
         }
-        if (book.getSummary() != null) {
-            existing.setSummary(book.getSummary());
+        if (dto.summary() != null) {
+            existing.setSummary(dto.summary());
         }
         existing.setUpdatedAt(LocalDateTime.now());
 
@@ -151,11 +150,9 @@ public class BookService {
 
     // AI 표지 이미지 저장
     @Transactional
-    public Book saveImgUrl(Long id, Book book) {
+    public Book saveImgUrl(Long id, CoverImageUpdateRequest request) {
         Book existing = findById(id);
-        if (book.getCoverImageUrl() != null) {
-            existing.setCoverImageUrl(book.getCoverImageUrl());
-        }
+        existing.setCoverImageUrl(request.getCoverImageUrl());
         return bookRepository.save(existing);
     }
 
@@ -199,124 +196,318 @@ public class BookService {
     public List<Book> getActiveBooks() {
         return bookRepository.findAll()
                 .stream()
-                //.filter(book -> book.getDeletedAt() == null)
+                .filter(book -> book.getDeletedAt() == null)
                 .toList();
     }
 
     // 도서 수 통계
     @Transactional(readOnly = true)
-    public Map<String, Object> getBookCountStatistics(String type) {
-        if (type == null || type.isBlank()) {
-            Map<String, Object> bookCountResult = new HashMap<>();
-
-            bookCountResult.put("genre", getBookCountByGenre());
-            bookCountResult.put("tag", getBookCountByTag());
-
-            return bookCountResult;
+    public Map<String, Object> getBookCountStatistics(List<String> type) {
+        if (type == null || type.isEmpty()) {
+            return Map.of(
+                    "genre", getBookCountByGenre(),
+                    "tag", getBookCountByTag()
+            );
         }
 
-        if (type.equals("genre")) {
-            return Map.of("genre", getBookCountByGenre());
-        }
-        if (type.equals("tag")) {
-            return Map.of("tag", getBookCountByTag());
+        Map<String, Object> result = new HashMap<>();
+
+        for (String t : type) {
+            switch (t) {
+                case "genre" -> result.put("genre", getBookCountByGenre());
+                case "tag" -> result.put("tag", getBookCountByTag());
+                default -> throw new IllegalArgumentException(
+                        "type은 genre 또는 tag만 가능합니다."
+                );
+            }
         }
 
-        throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
+        return result;
     }
 
     // 장르별 도서 수 합계
     private Map<String, Long> getBookCountByGenre() {
-        Map<String, Long> bookCountResult = new HashMap<>();
+        Map<String, Long> result = new HashMap<>();
 
         for (Book book : getActiveBooks()) {
             String genre = book.getGenre() != null ? book.getGenre() : "기타";
-            bookCountResult.put(genre, bookCountResult.getOrDefault(genre, 0L) + 1);
+            result.put(genre, result.getOrDefault(genre, 0L) + 1);
         }
 
-        return bookCountResult;
+        return result;
     }
 
     // 태그별 도서 수 합계
     private Map<String, Long> getBookCountByTag() {
-        Map<String, Long> bookCountResult = new HashMap<>();
+        Map<String, Long> result = new HashMap<>();
 
         for (Book book : getActiveBooks()) {
-            if (book.getTag() == null || book.getTag().trim().isEmpty()) {
-                continue;
-            }
-
-            String[] tags = book.getTag().split(",");
-            for (String tag : tags) {
-                String trimTag = tag.trim();
-                if (trimTag.isEmpty()) {
+            for (BookTag tag : book.getTags()) {
+                String tagName = tag.getName();
+                if (tagName == null || tagName.isBlank()) {
                     continue;
                 }
-                bookCountResult.put(trimTag, bookCountResult.getOrDefault(trimTag, 0L) + 1);
+
+                result.put(tagName, result.getOrDefault(tagName, 0L) + 1);
             }
         }
 
-        return bookCountResult;
+        return result;
     }
 
     // 좋아요 수 통계
     @Transactional(readOnly = true)
-    public Map<String, Object> getLikesCountStatistics(String type) {
-        if (type == null || type.isBlank()) {
-            Map<String, Object> likesCountResult = new HashMap<>();
-
-            likesCountResult.put("genre", getLikesCountByGenre());
-            likesCountResult.put("tag", getLikesCountByTag());
-
-            return likesCountResult;
+    public Map<String, Object> getLikesCountStatistics(List<String> type) {
+        if (type == null || type.isEmpty()) {
+            return Map.of(
+                    "genre", getLikesCountByGenre(),
+                    "tag", getLikesCountByTag()
+            );
         }
 
-        if (type.equals("genre")) {
-            return Map.of("genre", getLikesCountByGenre());
-        }
-        if (type.equals("tag")) {
-            return Map.of("tag", getLikesCountByTag());
-        }
+        Map<String, Object> result = new HashMap<>();
 
-        throw new IllegalArgumentException("type은 genre 또는 tag만 가능합니다.");
-    }
-
-    // 장르별 좋아요 수 합계
-    private Map<String, Integer> getLikesCountByGenre() {
-        Map<String, Integer> likesCountResult = new HashMap<>();
-
-        for (Book book : getActiveBooks()) {
-            String genre = book.getGenre() != null ? book.getGenre() : "기타";
-            int likes = book.getLikes() != null ? book.getLikes() : 0;
-
-            likesCountResult.put(genre, likesCountResult.getOrDefault(genre, 0) + likes);
-        }
-
-        return likesCountResult;
-    }
-
-    // 태그별 좋아요 수 합계
-    private Map<String, Integer> getLikesCountByTag() {
-        Map<String, Integer> likesCountResult = new HashMap<>();
-
-        for (Book book : getActiveBooks()) {
-            if (book.getTag() == null || book.getTag().trim().isEmpty()) {
-                continue;
+        for (String t : type) {
+            switch (t) {
+                case "genre" -> result.put("genre", getLikesCountByGenre());
+                case "tag" -> result.put("tag", getLikesCountByTag());
+                default -> throw new IllegalArgumentException(
+                        "type? genre ?먮뒗 tag留?媛?ν빀?덈떎."
+                );
             }
+        }
 
+        return result;
+    }
+
+    // ?λⅤ蹂?醫뗭븘?????⑷퀎
+    private Map<String, Integer> getLikesCountByGenre() {
+        Map<String, Integer> result = new HashMap<>();
+
+        for (Book book : getActiveBooks()) {
+            String genre = book.getGenre() != null ? book.getGenre() : "湲고?";
             int likes = book.getLikes() != null ? book.getLikes() : 0;
-            String[] tags = book.getTag().split(",");
-            for (String tag : tags) {
-                String trimTag = tag.trim();
-                if (trimTag.isEmpty()) {
+
+            result.put(genre, result.getOrDefault(genre, 0) + likes);
+        }
+
+        return result;
+    }
+
+    // ?쒓렇蹂?醫뗭븘?????⑷퀎
+    private Map<String, Integer> getLikesCountByTag() {
+        Map<String, Integer> result = new HashMap<>();
+
+        for (Book book : getActiveBooks()) {
+            int likes = book.getLikes() != null ? book.getLikes() : 0;
+            for (BookTag tag : book.getTags()) {
+                String tagName = tag.getName();
+                if (tagName == null || tagName.isBlank()) {
                     continue;
                 }
 
-                likesCountResult.put(trimTag, likesCountResult.getOrDefault(trimTag, 0) + likes);
+                result.put(tagName, result.getOrDefault(tagName, 0) + likes);
             }
         }
 
-        return likesCountResult;
+        return result;
+    }
+
+    // AI 표지 이미지 생성 (OpenAI 호출 → 압축 → DB 저장)
+    public Book generateCover(Long id, GenerateCoverRequest request) {
+        Book book = findById(id);
+        String prompt = buildPrompt(book);
+        String b64Json = callOpenAi(prompt, request.getApiKey(), request.getQuality());
+        String dataUrl = compressImage(b64Json);
+        return saveCoverImageUrl(id, dataUrl);
+    }
+
+    @Transactional
+    public Book saveCoverImageUrl(Long id, String dataUrl) {
+        Book existing = findById(id);
+        existing.setCoverImageUrl(dataUrl);
+        return bookRepository.save(existing);
+    }
+
+    private String buildPrompt(Book book) {
+        return String.format("""
+                A high-quality, professional book cover design for a book titled "%s" by %s.
+                Genre: %s. Tags: %s.
+                Visual concept based on the story: %s
+                ---
+                Visual direction:
+                - Genre-specific mood: %s
+                - Composition: cinematic, full-bleed illustration with strong focal point
+                - Color palette: rich and thematic, matching the genre and emotional tone
+                - Lighting: dramatic and atmospheric
+                ---
+                Text layout:
+                - Title "%s" displayed prominently at the top in elegant, genre-appropriate font
+                - Author name "%s" at the bottom in smaller clean serif font
+                - Text should be clearly legible and well-integrated into the design
+                ---
+                Style: professional publishing quality, award-winning book cover art
+                """,
+                book.getTitle(), book.getAuthor(), book.getGenre(), book.getTagText(),
+                book.getContent(), getGenreMood(book.getGenre()),
+                book.getTitle(), book.getAuthor()
+        ).trim();
+    }
+
+    private String getGenreMood(String genre) {
+        Map<String, String> moods = new HashMap<>();
+        moods.put("소설",   "literary fiction, emotional depth, human drama, warm and cinematic tones");
+        moods.put("고전",   "timeless elegance, vintage aesthetic, aged paper texture, classical art style");
+        moods.put("역사",   "historical epic, aged maps, sepia tones, dramatic lighting, period setting");
+        moods.put("IT",    "digital technology, circuit patterns, futuristic interface, clean modern design");
+        moods.put("동화",   "whimsical illustration, soft pastel colors, magical fairy tale world, children friendly");
+        moods.put("자기계발", "motivational, bright and energetic, clean minimalist design, uplifting mood");
+        moods.put("과학",   "scientific discovery, cosmos, molecular structures, clean and precise illustration");
+        moods.put("경제",   "professional, financial charts, bold typography, sleek corporate design");
+        moods.put("철학",   "deep and contemplative, abstract symbolism, dark and moody, thought-provoking");
+        moods.put("예술",   "creative expression, vibrant colors, artistic brushstrokes, gallery-worthy aesthetic");
+        return moods.getOrDefault(genre, "artistic, expressive, visually compelling");
+    }
+
+    @SuppressWarnings("unchecked")
+    private String callOpenAi(String prompt, String apiKey, String quality) {
+        try {
+            Map<String, Object> body = new HashMap<>();
+            body.put("model", "gpt-image-2");
+            body.put("prompt", prompt);
+            body.put("n", 1);
+            body.put("size", "1024x1536");
+            body.put("quality", quality != null ? quality : "low");
+            body.put("output_format", "png");
+
+            String jsonBody = objectMapper.writeValueAsString(body);
+
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(30))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.openai.com/v1/images/generations"))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .timeout(Duration.ofSeconds(120))
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 401) throw new OpenAiException(401, "API Key가 올바르지 않습니다.");
+            if (response.statusCode() == 429) throw new OpenAiException(429, "요청 한도 초과. 잠시 후 다시 시도해주세요.");
+            if (response.statusCode() != 200) throw new OpenAiException(response.statusCode(), "OpenAI 오류: " + response.statusCode());
+
+            Map<String, Object> responseBody = objectMapper.readValue(response.body(), Map.class);
+            List<Map<String, Object>> data = (List<Map<String, Object>>) responseBody.get("data");
+            String b64Json = (String) data.get(0).get("b64_json");
+
+            if (b64Json == null) throw new OpenAiException(500, "응답 형식 오류");
+            return b64Json;
+
+        } catch (OpenAiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new OpenAiException(500, "OpenAI API 호출 실패: " + e.getMessage());
+        }
+    }
+
+    private String compressImage(String b64Json) {
+        try {
+            byte[] pngBytes = Base64.getDecoder().decode(b64Json);
+            BufferedImage original = ImageIO.read(new ByteArrayInputStream(pngBytes));
+
+            int maxWidth = 400;
+            double scale = Math.min(1.0, (double) maxWidth / original.getWidth());
+            int w = (int) (original.getWidth() * scale);
+            int h = (int) (original.getHeight() * scale);
+
+            BufferedImage resized = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = resized.createGraphics();
+            g.drawImage(original.getScaledInstance(w, h, Image.SCALE_SMOOTH), 0, 0, null);
+            g.dispose();
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
+            ImageWriteParam params = writer.getDefaultWriteParam();
+            params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            params.setCompressionQuality(0.5f);
+            ImageOutputStream ios = ImageIO.createImageOutputStream(out);
+            writer.setOutput(ios);
+            writer.write(null, new IIOImage(resized, null, null), params);
+            writer.dispose();
+
+            return "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(out.toByteArray());
+        } catch (Exception e) {
+            return "data:image/png;base64," + b64Json;
+        }
+    }
+
+
+    // 도서 검색
+    @Transactional(readOnly = true)
+    public Page<BookSearchResponse> search(BookSearchRequest request, Pageable pageable) {
+        List<String> genres = normalizeSearchValues(request.genres());
+        List<String> tags = normalizeSearchValues(request.tags());
+
+        return bookRepository.searchBooks(
+                        normalizeSearchValue(request.keyword()),
+                        emptyListGuard(genres),
+                        genres.isEmpty(),
+                        emptyListGuard(tags),
+                        tags.isEmpty(),
+                        pageable
+                )
+                .map(BookSearchResponse::from);
+    }
+
+    // 인기 도서 조회
+    @Transactional(readOnly = true)
+    public List<BookSearchResponse> getPopularBooks(int limit) {
+        Pageable pageable = PageRequest.of(0, normalizeLimit(limit));
+        return bookRepository.findPopularBooks(pageable)
+                .stream()
+                .map(BookSearchResponse::from)
+                .toList();
+    }
+
+    private int normalizeLimit(int limit) {
+        // 인기 도서 조회 개수를 기본값과 최대 허용값 사이로 제한
+        if (limit <= 0) return DEFAULT_POPULAR_LIMIT;
+        return Math.min(limit, MAX_POPULAR_LIMIT);
+    }
+
+    private String normalizeSearchValue(String value) {
+        // 검색 조건 비교를 위해 null, 앞뒤 공백, 대소문자 차이를 정리
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private List<String> normalizeSearchValues(List<String> values) {
+        // 다중 쿼리 파라미터와 콤마로 묶인 값을 모두 동일한 리스트 조건으로 정리
+        if (values == null) return List.of();
+
+        return values.stream()
+                .flatMap(value -> List.of(value.split(",")).stream())
+                .map(this::normalizeSearchValue)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
+    }
+
+    private List<String> emptyListGuard(List<String> values) {
+        // JPQL의 IN 조건에 빈 리스트가 들어가지 않도록 더미 값을 넣어 쿼리 오류를 방지
+        return values.isEmpty() ? List.of("__empty__") : values;
+    }
+    private List<String> normalizeTagNames(String value) {
+        if (value == null) return List.of();
+
+        return Arrays.stream(value.split("[,/]"))
+                .map(String::trim)
+                .filter(tagName -> !tagName.isBlank())
+                .distinct()
+                .toList();
     }
 
     @Transactional(readOnly = true)

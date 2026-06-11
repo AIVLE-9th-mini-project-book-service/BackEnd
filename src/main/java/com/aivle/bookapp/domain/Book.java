@@ -6,6 +6,10 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Entity
 @Getter
 @Setter
@@ -35,8 +39,8 @@ public class Book {
     @Column(columnDefinition = "TEXT")
     private String summary;
 
-    @Column
-    private String tag;
+    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BookTag> tags = new ArrayList<>();
 
     @Column(columnDefinition = "TEXT")
     private String coverImageUrl;
@@ -54,4 +58,26 @@ public class Book {
 
     @Column
     private java.time.LocalDateTime deletedAt;
+
+    public void replaceTags(List<String> tagNames) {
+        tags.clear();
+
+        if (tagNames == null) {
+            return;
+        }
+
+        tagNames.stream()
+                .filter(tagName -> tagName != null && !tagName.isBlank())
+                .map(String::trim)
+                .distinct()
+                .map(tagName -> new BookTag(this, tagName))
+                .forEach(tags::add);
+    }
+
+    public String getTagText() {
+        return tags.stream()
+                .map(BookTag::getName)
+                .filter(tagName -> tagName != null && !tagName.isBlank())
+                .collect(Collectors.joining(","));
+    }
 }
