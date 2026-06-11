@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface CommentRepository extends JpaRepository<Comment, Long> {
-    List<Comment> findByBookId(Long bookId);  // 책 ID로 댓글 조회
+    List<Comment> findByBook_Id(Long bookId);  // 책 ID로 댓글 조회
 }
