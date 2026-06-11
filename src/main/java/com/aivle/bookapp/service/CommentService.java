@@ -5,6 +5,7 @@ import com.aivle.bookapp.domain.Comment;
 import com.aivle.bookapp.dto.CommentCreateRequest;
 import com.aivle.bookapp.dto.CommentUpdateRequest;
 import com.aivle.bookapp.exception.BookNotFoundException;
+import com.aivle.bookapp.exception.CommentNotFoundException;
 import com.aivle.bookapp.repository.BookRepository;
 import com.aivle.bookapp.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,7 @@ public class CommentService {
     // 후기 등록
     public Comment createComment(Long bookId, CommentCreateRequest request) {
         Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new BookNotFoundException(bookId));
+                .orElseThrow(() -> new CommentNotFoundException(bookId));
 
         Comment comment = new Comment();
 
@@ -51,7 +52,7 @@ public class CommentService {
     @Transactional(readOnly = true)
     public Comment findById(Long id){
         return commentRepository.findById(id).orElseThrow(()
-                ->new BookNotFoundException(id));
+                ->new CommentNotFoundException(id));
     }
 
     //도서 후기 수정
@@ -79,7 +80,7 @@ public class CommentService {
         if(commentRepository.existsById(id)){
             commentRepository.deleteById(id);
         }else{
-            throw new BookNotFoundException(id);
+            throw new CommentNotFoundException(id);
         }
     }
 }

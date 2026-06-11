@@ -17,7 +17,7 @@ import java.util.Map;
 @Tag(name = "Comment API", description = "댓글 관련 API")
 @RestController
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000")
+//@CrossOrigin(origins = "http://localhost:3000")
 public class CommentController {
 
     private final CommentService commentService;

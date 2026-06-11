@@ -22,5 +22,9 @@ spring:
     init:
       mode: never               # ddl-auto: update로 변경 시 never로 함께 변경
 
+
 cors:
   allowed-origins: "http://localhost:5173"
+
+jwt:
+  secret: mySecretKey1234567890mySecretKey1234567890123456
