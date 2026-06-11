@@ -16,10 +16,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
+    // POST BadRequest
     @ExceptionHandler({MethodArgumentNotValidException.class})
     public ResponseEntity<Map<String, String>> handleBadRequest(MethodArgumentNotValidException e){
         String errorMessage = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
         Map<String, String> body = Map.of("error", "Bad Request", "message", errorMessage);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    // PATCH BadRequest,
+    @ExceptionHandler({IllegalArgumentException.class})
+    public ResponseEntity<Map<String, String>> handleIllegalArgumentException (IllegalArgumentException e) {
+        Map<String, String> body = Map.of("error","Bad Request", "message", e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
@@ -60,6 +68,7 @@ public class GlobalExceptionHandler {
         Map<String, String> body = Map.of("error", "Forbidden", "message", e.getReason());
         return ResponseEntity.status(e.getStatusCode()).body(body);
     }
+
 
 
 }

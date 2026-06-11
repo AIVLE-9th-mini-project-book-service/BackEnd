@@ -4,6 +4,12 @@ import com.aivle.bookapp.domain.Book;
 import com.aivle.bookapp.dto.*;
 import com.aivle.bookapp.dto.AiBookSummaryRequest;
 import com.aivle.bookapp.dto.AiBookSummaryResponse;
+import com.aivle.bookapp.dto.BookSearchRequest;
+import com.aivle.bookapp.dto.BookSearchResponse;
+import com.aivle.bookapp.dto.CoverImageUpdateRequest;
+import com.aivle.bookapp.dto.GenerateCoverRequest;
+import com.aivle.bookapp.dto.BookUpdateRequest;
+import com.aivle.bookapp.dto.GenerateCoverResponse;
 import com.aivle.bookapp.service.BookService;
 import com.aivle.bookapp.util.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -70,6 +76,13 @@ public class BookController {
         return bookService.getPopularBooks(limit);
     }
 
+    // 도서 삭제 목록 조회
+    @Operation(summary = "도서 삭제 목록", description = "삭제된 전체 도서를 조회합니다.")
+    @GetMapping("/books/trash")
+    public List<Book> findAllDeletedBooks() {
+        return bookService.findAllByDeleted();
+    }
+
     @GetMapping("/books/page")
     public Page<Book> getPage(@RequestParam int page, @RequestParam int size, @RequestParam String sortBy) {
         return bookService.getPage(page, size, sortBy);
@@ -122,23 +135,22 @@ public class BookController {
     @PatchMapping("/books/{id}/like")
     public ResponseEntity<Map<String, Object>> likeBook(@PathVariable Long id) {
         bookService.likeBook(id);
-        Map<String, Object> body = Map.of("message", "좋아요 성공");
+        Map<String, Object> body = Map.of(
+                "message", "좋아요 성공"
+        );
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
-    // AI 표지 이미지 생성
+    // AI 표지 이미지 생성 (백엔드에서 OpenAI 호출)
     @Operation(summary = "AI 표지 생성", description = "OpenAI를 이용하여 표지 이미지를 생성합니다.")
     @PostMapping("/books/{id}/cover/generate")
-    public ResponseEntity<Map<String, Object>> generateCover(
-            @PathVariable Long id,
-            @Valid @RequestBody GenerateCoverRequest request) {
+    public ResponseEntity<GenerateCoverResponse> generateCover(@PathVariable Long id, @Valid @RequestBody GenerateCoverRequest request) {
         Book updatedBook = bookService.generateCover(id, request);
-        Map<String, Object> body = Map.of(
-                "id", updatedBook.getId(),
-                "message", "표지 이미지 생성 성공",
-                "coverImageUrl", updatedBook.getCoverImageUrl()
-        );
-        return ResponseEntity.status(HttpStatus.OK).body(body);
+        return ResponseEntity.ok(new GenerateCoverResponse(
+                updatedBook.getId(),
+                "표지 이미지 생성 성공",
+                updatedBook.getCoverImageUrl()
+        ));
     }
 
     // AI 표지 이미지 저장
@@ -157,10 +169,13 @@ public class BookController {
     }
 
     // AI 한줄평 생성
+    @Operation(summary = "AI 한줄평 생성", description = "OpenAI를 이용하여 도서 한줄평을 생성합니다.")
     @PostMapping("/books/{id}/summary/generate")
     public ResponseEntity<AiBookSummaryResponse> generateSummary(
             @PathVariable Long id,
             @Valid @RequestBody AiBookSummaryRequest request) {
+
+
         AiBookSummaryResponse response = bookService.generateSummary(id, request);
         return ResponseEntity.ok(response);
     }
@@ -196,7 +211,8 @@ public class BookController {
     @Operation(summary = "좋아요 수 통계", description = "좋아요 수를 통계냅니다.")
     @GetMapping("/books/statistics/likes")
     public ResponseEntity<Map<String, Object>> getLikesCountStatistics(
-            @RequestParam(required = false) List<String> type) {
+            @RequestParam(required = false) List<String> type
+    ) {
         return ResponseEntity.ok(bookService.getLikesCountStatistics(type));
     }
 }

@@ -1,5 +1,7 @@
 package com.aivle.bookapp.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,8 +17,10 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long bookId;
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "book_id", nullable = false)
+    private Book book;
 
     @Column(nullable = false)
     private String author = "익명";  // 입력 없으면 익명으로 처리
@@ -29,4 +33,10 @@ public class Comment {
 
     @Column
     private java.time.LocalDateTime createdAt;
+
+
+    @JsonProperty("bookId")
+    public Long getBookId() {
+        return book == null ? null : book.getId();
+    }
 }
