@@ -2,6 +2,8 @@ package com.aivle.bookapp.controller;
 
 import com.aivle.bookapp.domain.Book;
 import com.aivle.bookapp.dto.*;
+import com.aivle.bookapp.dto.AiBookSummaryRequest;
+import com.aivle.bookapp.dto.AiBookSummaryResponse;
 import com.aivle.bookapp.service.BookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -146,13 +148,23 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
+    // AI 한줄평 생성
+    @PostMapping("/books/{id}/summary/generate")
+    public ResponseEntity<AiBookSummaryResponse> generateSummary(
+            @PathVariable Long id,
+            @Valid @RequestBody AiBookSummaryRequest request) {
+
+
+        AiBookSummaryResponse response = bookService.generateSummary(id, request);
+        return ResponseEntity.ok(response);
+    }
+
     // 한줄평 저장
     @Operation(summary = "AI 한줄평 저장", description = "OpenAI로 생성한 도서 한줄평을 저장합니다.")
     @PatchMapping("/books/{id}/summary")
     public Book saveSummary(@PathVariable Long id, @RequestParam String summary) {
         return bookService.saveSummary(id, summary);
     }
-
     // 도서 영구 삭제
     @Operation(summary = "도서 영구 삭제", description = "도서를 DB에서 완전히 삭제합니다.")
     @DeleteMapping("/books/{id}")
