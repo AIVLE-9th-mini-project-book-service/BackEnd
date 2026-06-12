@@ -62,7 +62,8 @@ public class CommentController {
         return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
-    // 도서 댓글 삭제
+    // 댓글 삭제
+    @Operation(summary = " 댓글 삭제", description = "특정 도서의 댓글을 삭제합니다.")
     @DeleteMapping("/comments/{id}")
     public ResponseEntity<Void> deleteComment(
             @PathVariable Long id,
