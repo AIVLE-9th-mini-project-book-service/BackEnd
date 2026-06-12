@@ -95,7 +95,35 @@ Spring Data JPA를 활용하여 도서 CRUD, 회원 관리, 좋아요, 댓글, A
 - 존재하지 않는 댓글 조회/수정 예외처리
 - OpenAI API 호출 및 이미지 생성 예외처리
 
+## Screenshot
 
+- 도서 메인페이지 UI
+
+<img width="640" height="349" alt="Image" src="https://github.com/user-attachments/assets/4f1f84a4-3ab2-4571-9b84-30f1f856b754" />
+
+- 도서 등록페이지 UI
+
+<img width="640" height="348" alt="Image" src="https://github.com/user-attachments/assets/6b9b5995-6993-4770-9e4b-d5f41694b37f" />
+
+- 도서 목록페이지 UI
+
+<img width="640" height="349" alt="Image" src="https://github.com/user-attachments/assets/e2cf5065-a57a-42c5-b99c-ef65f72ca5b4" />
+
+- 도서 수정페이지 UI
+
+<img width="640" height="334" alt="Image" src="https://github.com/user-attachments/assets/14ce77f1-c4f3-449c-b7a0-098b07e529d4" />
+
+- 도서 삭제 페이지 UI
+
+<img width="640" height="362" alt="Image" src="https://github.com/user-attachments/assets/4d0b9076-9a6c-4bef-93b8-8f8d78c8cfb6" />
+
+- 도서 통계 페이지 UI
+
+<img width="640" height="313" alt="Image" src="https://github.com/user-attachments/assets/1501908b-4357-4df4-b23e-c50df0bcdf4d" />
+
+- 휴지통 UI
+
+<img width="640" height="338" alt="Image" src="https://github.com/user-attachments/assets/3d6c192d-c34f-4fb0-821a-5b675119be30" />
 
 ## 설치 방법
 
