@@ -23,15 +23,22 @@ public class JwtFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
+        String path = request.getRequestURI();
+
+        // /admin/** 경로는 JwtFilter 통과 (AdminController에서 자체 검증)
+        if (path.contains("/admin/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7); // "Bearer " 제거
+            String token = authHeader.substring(7);
 
             if (jwtUtil.validateToken(token)) {
                 String email = jwtUtil.getEmail(token);
 
-                // Spring Security에 인증 정보 등록
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(email, null, List.of());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
