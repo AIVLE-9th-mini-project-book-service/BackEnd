@@ -4,7 +4,7 @@
 
 ## 프로젝트 개요
 
-"걸어서 서재 속으로" 백엔드는 Spring Boot 기반의 도서 관리 시스템 API 서버입니다.
+**걸어서 서재 속으로** 백엔드는 Spring Boot 기반의 도서 관리 시스템 API 서버입니다.
 
 Spring Data JPA를 활용하여 도서 CRUD, 회원 관리, 좋아요, 댓글, AI 이미지 생성, AI 한줄평, 사용자 통계 기능을 제공하는 REST API를 구현하였습니다.
 
@@ -222,6 +222,7 @@ src/
 │       ├── data.sql
 │       └── mysql_mini5.sql
 └── test/
+```
 
 ### 주요 디렉토리 설명
 - config : 보안 및 환경 설정
@@ -232,3 +233,47 @@ src/
 - repository : 데이터베이스 접근
 - service : 비즈니스 로직 처리
 
+## 시스템 아키텍처
+
+<img width="677" height="240" alt="Image" src="https://github.com/user-attachments/assets/68e60a5d-0305-4ec6-a3f1-4cbcfe4a7a72" />
+
+
+## 트러블 슈팅
+### 1. 프론트엔드/백엔드 Path 중복 문제
+
+- Before
+
+  <img width="1279" height="764" alt="Image" src="https://github.com/user-attachments/assets/ff08b0db-19d2-4f6f-9402-9ba586909da6" />
+
+  - 기존에는 프론트엔드와 백엔드가 같은 path를 사용
+  - 새로고침 시 백엔드와 직접 통신
+  - Controller가 요청을 받아 JSON 반환
+  - 프론트엔드 화면이 아닌 JSON 문자열이 그대로 출력되는 문제 발생
+
+- After
+
+  <img width="2539" height="1451" alt="Image" src="https://github.com/user-attachments/assets/f2eaeba5-d866-47c7-a39a-f20777079340" />
+
+  - yaml에 servelt.path: /api 설정 -> /api prefix 설정
+  - vite.config에 '/api': 'http://localhost:8080' 설정
+  - 프록시를 통한 CORS 오류 해결
+
+
+### 2. 댓글 접근 시 관리자 인증 문제
+- Before
+
+  <img width="443" height="236" alt="Image" src="https://github.com/user-attachments/assets/e31e6825-e78b-43d4-a3fa-741e682f7fb8" />
+
+  - 기존에는 관리자와 일반 유저 구분 없이 동일한 로직 사용
+  - 모든 수정/삭제 요청에 checkOwner() 적용
+  - 관리자 토큰의 email이 admin이라 본인 소유 아님으로 판단
+  - 관리자도 403 Forbidden 에러 발생
+
+- After
+
+  <img width="452" height="278" alt="Image" src="https://github.com/user-attachments/assets/0b917374-71cf-40ec-93a4-d4a983816aa1" />
+
+  - JWT claim에 role: ADMIN 추가
+  - 관리자 전용 API 별도 생성 (/admin/books/{id}, /admin/comments/{id})
+  - checkOwner() 없이 모든 도서/댓글 수정삭제 가능
+  - 일반 유저 API는 기존 checkOwner() 로직 유지
