@@ -108,7 +108,7 @@ Spring Data JPA를 활용하여 도서 CRUD, 회원 관리, 좋아요, 댓글, A
 
 - 도서 등록페이지 UI
 
-<img width="640" height="348" alt="Image" src="https://github.com/user-attachments/assets/6b9b5995-6993-4770-9e4b-d5f41694b37f" />
+<img width="428" height="625" alt="Image" src="https://github.com/user-attachments/assets/0757bdc4-77ea-4f90-a97c-61e0590ca517" />
 
 - 도서 목록페이지 UI
 
