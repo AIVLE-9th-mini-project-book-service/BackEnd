@@ -77,6 +77,7 @@ public class AdminController {
         return ResponseEntity.ok("삭제 완료");
     }
 
+    @Operation(summary = "관리자 댓글 수정", description = "관리자 권한을 가진 사용자가 댓글을 수정합니다.")
     @PatchMapping("/comments/{id}")
     public ResponseEntity<?> updateComment(
             @PathVariable Long id,
@@ -91,6 +92,7 @@ public class AdminController {
         return ResponseEntity.ok(commentService.adminCommentUpdate(id, request));
     }
 
+    @Operation(summary = "관리자 댓글 삭제", description = "관리자 권한을 가진 사용자가 댓글을 삭제합니다.")
     @DeleteMapping("/comments/{id}")
     public ResponseEntity<?> deleteComment(
             @PathVariable Long id,
