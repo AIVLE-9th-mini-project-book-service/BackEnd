@@ -110,7 +110,7 @@ cd BackEnd
 - BackEnd 프로젝트 열기
 - Gradle 의존성 다운로드 완료 대기
 - BookappApplication.java 실행
-- 
+
 ### 터미널 실행
 gradlew.bat bootRun
 
@@ -131,6 +131,7 @@ src/
 │   │       │   ├── SwaggerConfig.java
 │   │       │   └── WebConfig.java
 │   │       ├── controller/
+│   │       │   ├── AdminController.java
 │   │       │   ├── BookController.java
 │   │       │   ├── CommentController.java
 │   │       │   └── MemberController.java
@@ -142,19 +143,25 @@ src/
 │   │       ├── dto/
 │   │       │   ├── AiBookSummaryRequest.java
 │   │       │   ├── AiBookSummaryResponse.java
+│   │       │   ├── BookCountStatisticsResponse.java
 │   │       │   ├── BookCreateRequest.java
+│   │       │   ├── BookResponse.java
 │   │       │   ├── BookSearchRequest.java
 │   │       │   ├── BookSearchResponse.java
 │   │       │   ├── BookUpdateRequest.java
 │   │       │   ├── CommentCreateRequest.java
+│   │       │   ├── CommentResponse.java
 │   │       │   ├── CommentUpdateRequest.java
 │   │       │   ├── CoverImageUpdateRequest.java
 │   │       │   ├── GenerateCoverRequest.java
 │   │       │   ├── GenerateCoverResponse.java
+│   │       │   ├── LikesStatisticsResponse.java
 │   │       │   ├── LoginRequest.java
 │   │       │   ├── LoginResponse.java
+│   │       │   ├── MessageResponse.java
 │   │       │   ├── SignupRequest.java
-│   │       │   └── SignupResponse.java
+│   │       │   ├── SignupResponse.java
+│   │       │   └── SummaryUpdateRequest.java
 │   │       ├── exception/
 │   │       │   ├── BookNotFoundException.java
 │   │       │   ├── CommentNotFoundException.java
@@ -170,6 +177,7 @@ src/
 │   │       │   ├── CommentRepository.java
 │   │       │   └── MemberRepository.java
 │   │       ├── service/
+│   │       │   ├── BookCoverImage.java
 │   │       │   ├── BookService.java
 │   │       │   ├── CommentService.java
 │   │       │   └── MemberService.java
