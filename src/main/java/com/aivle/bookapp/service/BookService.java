@@ -526,7 +526,7 @@ public class BookService {
     private List<String> normalizeTagNames(String value) {
         if (value == null) return List.of();
 
-        return Arrays.stream(value.split("[,/]"))
+        return Arrays.stream(value.split(","))  // [,/] → ,
                 .map(String::trim)
                 .filter(tagName -> !tagName.isBlank())
                 .distinct()
