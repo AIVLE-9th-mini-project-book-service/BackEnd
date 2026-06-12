@@ -1,6 +1,7 @@
 package com.aivle.bookapp.controller;
 
 import com.aivle.bookapp.domain.Book;
+import com.aivle.bookapp.domain.Member;
 import com.aivle.bookapp.dto.*;
 import com.aivle.bookapp.dto.AiBookSummaryRequest;
 import com.aivle.bookapp.dto.AiBookSummaryResponse;
@@ -11,6 +12,7 @@ import com.aivle.bookapp.dto.GenerateCoverRequest;
 import com.aivle.bookapp.dto.BookUpdateRequest;
 import com.aivle.bookapp.dto.GenerateCoverResponse;
 import com.aivle.bookapp.service.BookService;
+import com.aivle.bookapp.service.MemberService;
 import com.aivle.bookapp.util.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,6 +35,7 @@ import java.util.Map;
 public class BookController {
 
     private final BookService bookService;
+    private final MemberService memberService;
     private final JwtUtil jwtUtil;
 
     // 도서 목록 조회
@@ -214,5 +217,15 @@ public class BookController {
             @RequestParam(required = false) List<String> type
     ) {
         return ResponseEntity.ok(bookService.getLikesCountStatistics(type));
+    }
+
+    @Operation(summary = "내 도서 목록", description = "내가 등록한 도서 목록을 조회합니다.")
+    @GetMapping("/books/my")
+    public ResponseEntity<List<Book>> getMyBooks(
+            @RequestHeader("Authorization") String authHeader) {
+        String email = jwtUtil.getEmail(authHeader.substring(7));
+        Member member = memberService.findByEmail(email);
+        List<Book> books = bookService.myBooks(member.getId());
+        return ResponseEntity.ok(books);
     }
 }

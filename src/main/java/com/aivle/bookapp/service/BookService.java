@@ -20,6 +20,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -579,4 +580,8 @@ public class BookService {
         }
     }
 
+    @Transactional
+    public List<Book> myBooks(Long memberId){
+        return bookRepository.findByMemberIdAndDeletedAtIsNull(memberId);
+    }
 }
