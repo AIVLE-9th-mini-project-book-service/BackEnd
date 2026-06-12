@@ -155,7 +155,7 @@ class BookCoverControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.message").value("도서 수정 성공"))
+                .andExpect(jsonPath("$.message").value("표지 이미지 저장 성공"))
                 .andExpect(jsonPath("$.coverImageUrl").exists());
     }
 

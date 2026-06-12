@@ -30,6 +30,9 @@ class BookCoverServiceTest {
     @InjectMocks
     private BookService bookService;
 
+    @InjectMocks
+    private BookCoverImageService bookCoverImageService;
+
     private Book book;
 
     @BeforeEach
@@ -86,7 +89,7 @@ class BookCoverServiceTest {
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(bookRepository.save(any(Book.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Book result = bookService.saveCoverImageUrl(1L, dataUrl);
+        Book result = bookCoverImageService.saveCoverImageUrl(1L, dataUrl);
 
         assertThat(result.getCoverImageUrl()).isEqualTo(dataUrl);
         assertThat(result.getCoverImageUrl()).startsWith("data:image/jpeg;base64,");
@@ -98,7 +101,7 @@ class BookCoverServiceTest {
     void saveCoverImageUrl_bookNotFound() {
         when(bookRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> bookService.saveCoverImageUrl(999L, "data:image/jpeg;base64,test"))
+        assertThatThrownBy(() -> bookCoverImageService.saveCoverImageUrl(999L, "data:image/jpeg;base64,test"))
                 .isInstanceOf(BookNotFoundException.class);
 
         verify(bookRepository, never()).save(any());
