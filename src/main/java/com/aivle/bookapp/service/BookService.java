@@ -9,7 +9,6 @@ import com.aivle.bookapp.dto.AiBookSummaryResponse;
 import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.exception.MemberNotFoundException;
 import com.aivle.bookapp.exception.OpenAiException;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import com.aivle.bookapp.repository.BookRepository;
 import com.aivle.bookapp.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,8 +20,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
