@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -27,9 +26,10 @@ public class CommentService {
 
     private final CommentRepository commentRepository;
     private final BookRepository bookRepository;
-    private final MemberRepository memberRepository; // 추가
+    private final MemberRepository memberRepository;
 
     // 후기 등록
+    @Transactional
     public CommentResponse createComment(Long bookId, CommentCreateRequest request, String email) {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new BookNotFoundException(bookId));
@@ -39,12 +39,14 @@ public class CommentService {
         comment.setCreatedAt(java.time.LocalDateTime.now());
 
         if (email != null) {
+            // 로그인 사용자
             Member member = memberRepository.findByEmail(email)
                     .orElseThrow(() -> new MemberNotFoundException(email));
             comment.setMember(member);
             comment.setAuthor(member.getName());
             comment.setPassword(null);
         } else {
+            // 비로그인 사용자
             comment.setAuthor(request.author() == null || request.author().isBlank() ? "익명" : request.author());
             comment.setPassword(request.password());
         }
@@ -55,6 +57,7 @@ public class CommentService {
     }
 
     // 후기 조회
+    @Transactional(readOnly = true)
     public List<CommentResponse> findComments(Long bookId) {
         return commentRepository.findByBook_Id(bookId).stream()
                 .map(CommentResponse::from)
@@ -73,10 +76,12 @@ public class CommentService {
         Comment existing = findById(id);
 
         if (email != null) {
+            // 로그인 사용자 → 본인 댓글인지 확인
             if (existing.getMember() == null || !existing.getMember().getEmail().equals(email)) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 댓글만 수정할 수 있습니다.");
             }
         } else {
+            // 비로그인 사용자 → 비밀번호 확인
             if (existing.getPassword() == null || !existing.getPassword().equals(dto.password())) {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "비밀번호가 일치하지 않습니다.");
             }
@@ -108,5 +113,4 @@ public class CommentService {
 
         commentRepository.deleteById(id);
     }
-
 }
