@@ -13,7 +13,7 @@ public class SwaggerConfig {
     public OpenAPI openAPI() {
 
         Info info = new Info()
-                .title("걷기가 서재")
+                .title("걸어서 서재 속으로")
                 .description("도서 관리 시스템")
                 .version("v1.0")
                 .contact(
