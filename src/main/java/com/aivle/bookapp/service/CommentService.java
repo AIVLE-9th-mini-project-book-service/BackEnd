@@ -4,6 +4,7 @@ import com.aivle.bookapp.domain.Book;
 import com.aivle.bookapp.domain.Comment;
 import com.aivle.bookapp.domain.Member;
 import com.aivle.bookapp.dto.CommentCreateRequest;
+import com.aivle.bookapp.dto.CommentResponse;
 import com.aivle.bookapp.dto.CommentUpdateRequest;
 import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.exception.CommentNotFoundException;
@@ -29,7 +30,7 @@ public class CommentService {
     private final MemberRepository memberRepository; // 추가
 
     // 후기 등록
-    public Comment createComment(Long bookId, CommentCreateRequest request, String email) {
+    public CommentResponse createComment(Long bookId, CommentCreateRequest request, String email) {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new BookNotFoundException(bookId));
 
@@ -38,26 +39,26 @@ public class CommentService {
         comment.setCreatedAt(java.time.LocalDateTime.now());
 
         if (email != null) {
-            // 로그인 사용자
             Member member = memberRepository.findByEmail(email)
                     .orElseThrow(() -> new MemberNotFoundException(email));
             comment.setMember(member);
             comment.setAuthor(member.getName());
             comment.setPassword(null);
         } else {
-            // 비로그인 사용자
             comment.setAuthor(request.author() == null || request.author().isBlank() ? "익명" : request.author());
             comment.setPassword(request.password());
         }
 
         comment.setText(request.text());
 
-        return commentRepository.save(comment);
+        return CommentResponse.from(commentRepository.save(comment));
     }
 
     // 후기 조회
-    public List<Comment> findComments(Long bookId) {
-        return commentRepository.findByBook_Id(bookId);
+    public List<CommentResponse> findComments(Long bookId) {
+        return commentRepository.findByBook_Id(bookId).stream()
+                .map(CommentResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -68,16 +69,14 @@ public class CommentService {
 
     // 도서 후기 수정
     @Transactional
-    public Comment commentUpdate(Long id, CommentUpdateRequest dto, String email) {
+    public CommentResponse commentUpdate(Long id, CommentUpdateRequest dto, String email) {
         Comment existing = findById(id);
 
         if (email != null) {
-            // 로그인 사용자 → 본인 댓글인지 확인
             if (existing.getMember() == null || !existing.getMember().getEmail().equals(email)) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 댓글만 수정할 수 있습니다.");
             }
         } else {
-            // 비로그인 사용자 → 비밀번호 확인
             if (existing.getPassword() == null || !existing.getPassword().equals(dto.password())) {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "비밀번호가 일치하지 않습니다.");
             }
@@ -87,7 +86,7 @@ public class CommentService {
             existing.setText(dto.text());
         }
 
-        return commentRepository.save(existing);
+        return CommentResponse.from(commentRepository.save(existing));
     }
 
     // 도서 후기 삭제

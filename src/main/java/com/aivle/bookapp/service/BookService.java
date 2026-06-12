@@ -9,7 +9,6 @@ import com.aivle.bookapp.dto.AiBookSummaryResponse;
 import com.aivle.bookapp.exception.BookNotFoundException;
 import com.aivle.bookapp.exception.MemberNotFoundException;
 import com.aivle.bookapp.exception.OpenAiException;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import com.aivle.bookapp.repository.BookRepository;
 import com.aivle.bookapp.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -545,6 +544,39 @@ public class BookService {
         Book book = findById(id);
         String summary = callOpenAiApi(book.getContent(), request.apiKey());
         return new AiBookSummaryResponse(summary);
+    }
+
+    // 관리자 - 도서 수정 (소유자 체크 없음)
+    @Transactional
+    public Book adminUpdate(Long id, BookUpdateRequest dto) {
+        Book existing = findById(id);
+
+        if (dto.title() != null) {
+            if (dto.title().isBlank()) throw new IllegalArgumentException("제목은 비워둘 수 없습니다.");
+            existing.setTitle(dto.title());
+        }
+        if (dto.author() != null) {
+            if (dto.author().isBlank()) throw new IllegalArgumentException("저자명은 비워둘 수 없습니다.");
+            existing.setAuthor(dto.author());
+        }
+        if (dto.genre() != null) {
+            if (dto.genre().isBlank()) throw new IllegalArgumentException("장르는 비워둘 수 없습니다.");
+            existing.setGenre(dto.genre());
+        }
+        if (dto.content() != null) existing.setContent(dto.content());
+        if (dto.tag() != null) existing.replaceTags(normalizeTagNames(dto.tag()));
+        if (dto.coverImageUrl() != null) existing.setCoverImageUrl(dto.coverImageUrl());
+        if (dto.summary() != null) existing.setSummary(dto.summary());
+        existing.setUpdatedAt(LocalDateTime.now());
+
+        return bookRepository.save(existing);
+    }
+
+    // 관리자 - 도서 삭제 (소유자 체크 없음)
+    @Transactional
+    public void adminDelete(Long id) {
+        findById(id); // 존재 여부만 확인
+        bookRepository.deleteById(id);
     }
 
     private String callOpenAiApi(String content, String apiKey) {
