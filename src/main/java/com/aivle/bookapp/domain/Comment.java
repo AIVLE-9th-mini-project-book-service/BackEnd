@@ -28,7 +28,7 @@ public class Comment {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String text;
 
-    @Column(nullable = false)
+    @Column
     private String password;
 
     @Column
