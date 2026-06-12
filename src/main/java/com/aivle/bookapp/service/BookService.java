@@ -59,7 +59,8 @@ public class BookService {
     private static final int MAX_POPULAR_LIMIT = 50;
 
     private final BookRepository bookRepository;
-    private final MemberRepository memberRepository; // 추가
+    private final MemberRepository memberRepository;
+    private final BookCoverImageService bookCoverImageService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // 도서 상세 조회
@@ -73,6 +74,7 @@ public class BookService {
     public List<Book> findAll() {
         return bookRepository.findAll();
     }
+
     // 도서 삭제 목록 조회
     @Transactional(readOnly = true)
     public List<Book> findAllByDeleted() {
@@ -228,8 +230,7 @@ public class BookService {
     }
 
     // 삭제되지 않은 도서만 가져오기
-    @Transactional(readOnly = true)
-    public List<Book> getActiveBooks() {
+    private List<Book> getActiveBooks() {
         return bookRepository.findAll()
                 .stream()
                 .filter(book -> book.getDeletedAt() == null)
@@ -345,15 +346,9 @@ public class BookService {
         String prompt = buildPrompt(book);
         String b64Json = callOpenAi(prompt, request.getApiKey(), request.getQuality());
         String dataUrl = compressImage(b64Json);
-        return saveCoverImageUrl(id, dataUrl);
+        return bookCoverImageService.saveCoverImageUrl(id, dataUrl);
     }
 
-    @Transactional
-    public Book saveCoverImageUrl(Long id, String dataUrl) {
-        Book existing = findById(id);
-        existing.setCoverImageUrl(dataUrl);
-        return bookRepository.save(existing);
-    }
 
     private String buildPrompt(Book book) {
         return String.format("""
@@ -476,7 +471,6 @@ public class BookService {
         }
     }
 
-
     // 도서 검색
     @Transactional(readOnly = true)
     public Page<BookSearchResponse> search(BookSearchRequest request, Pageable pageable) {
@@ -539,7 +533,6 @@ public class BookService {
                 .toList();
     }
 
-    @Transactional
     public AiBookSummaryResponse generateSummary(Long id, AiBookSummaryRequest request) {
         Book book = findById(id);
         String summary = callOpenAiApi(book.getContent(), request.apiKey());
