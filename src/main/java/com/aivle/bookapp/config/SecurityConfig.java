@@ -43,11 +43,12 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/members/signup", "/members/login", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-
                         .requestMatchers(HttpMethod.GET, "/books/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/books/*/comments").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/comments/*").permitAll() // 추가
-                        .requestMatchers(HttpMethod.PATCH, "/comments/*").permitAll()  // 추가
+                        .requestMatchers(HttpMethod.DELETE, "/comments/*").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/comments/*").permitAll()
+                        .requestMatchers("/admin/login").permitAll()      // 추가
+                        .requestMatchers("/admin/**").permitAll()         // 추가
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);

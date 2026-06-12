@@ -1,6 +1,7 @@
 package com.aivle.bookapp.repository;
 
 import com.aivle.bookapp.domain.Book;
+import com.aivle.bookapp.domain.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -61,4 +62,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     );
 
     List<Book> findAllByDeletedAtIsNotNull();
+
+    List<Book> findByMemberIdAndDeletedAtIsNull(Long memeberId);
+
+    Long member(Member member);
 }
