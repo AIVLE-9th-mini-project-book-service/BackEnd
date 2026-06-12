@@ -36,7 +36,7 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("accessToken", token));
     }
 
-    @PutMapping("/books/{id}")
+    @PatchMapping("/books/{id}")
     public ResponseEntity<?> updateBook(
             @PathVariable Long id,
             @RequestBody BookUpdateRequest request,
