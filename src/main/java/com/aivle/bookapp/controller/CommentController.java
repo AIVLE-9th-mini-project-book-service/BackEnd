@@ -5,19 +5,14 @@ import com.aivle.bookapp.dto.CommentCreateRequest;
 import com.aivle.bookapp.dto.CommentResponse;
 import com.aivle.bookapp.dto.CommentUpdateRequest;
 import com.aivle.bookapp.service.CommentService;
+import com.aivle.bookapp.util.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -25,10 +20,10 @@ import java.util.Map;
 @Tag(name = "Comment API", description = "댓글 관련 API")
 @RestController
 @RequiredArgsConstructor
-//@CrossOrigin(origins = "http://localhost:3000")
 public class CommentController {
 
     private final CommentService commentService;
+    private final JwtUtil jwtUtil;
 
     // 댓글 등록
     @Operation(summary = "댓글 등록", description = "특정 도서에 댓글을 등록합니다.")
@@ -60,5 +55,17 @@ public class CommentController {
                 .map(CommentResponse::from)
                 .toList();
         return ResponseEntity.ok(responses);
+    }
+
+    // 토큰에서 이메일 추출 (토큰 없으면 null)
+    private String extractEmail(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            try {
+                return jwtUtil.getEmail(authHeader.substring(7));
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        return null;
     }
 }

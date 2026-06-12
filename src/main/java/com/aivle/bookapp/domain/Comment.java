@@ -23,7 +23,7 @@ public class Comment {
     private Book book;
 
     @Column(nullable = false)
-    private String author = "익명";  // 입력 없으면 익명으로 처리
+    private String author = "익명";
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String text;
@@ -34,9 +34,17 @@ public class Comment {
     @Column
     private java.time.LocalDateTime createdAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", nullable = true)
+    private Member member;
 
     @JsonProperty("bookId")
     public Long getBookId() {
         return book == null ? null : book.getId();
+    }
+
+    @JsonProperty("memberId")
+    public Long getMemberId() {
+        return member == null ? null : member.getId();
     }
 }
