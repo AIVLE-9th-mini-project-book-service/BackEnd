@@ -30,3 +30,7 @@ cors:
 
 jwt:
   secret: mySecretKey1234567890mySecretKey1234567890123456
+
+admin:
+  username: admin
+  password: admin1234

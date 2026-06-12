@@ -24,6 +24,27 @@ public class JwtUtil {
         return generateToken(email, ACCESS_EXPIRATION);
     }
 
+
+    // 관리자용 추가
+    public String generateAccessToken(String email, String role) {
+        return Jwts.builder()
+                .setSubject(email)
+                .claim("role", role)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_EXPIRATION))
+                .signWith(key)  // getSigningKey() → key
+                .compact();
+    }
+
+    public String extractRole(String token) {
+        return Jwts.parser()
+                .verifyWith(key)  // getSigningKey() → key
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("role", String.class);
+    }
+
     // Refresh Token 생성
     public String generateRefreshToken(String email) {
         return generateToken(email, REFRESH_EXPIRATION);
