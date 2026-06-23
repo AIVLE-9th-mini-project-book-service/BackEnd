@@ -10,7 +10,7 @@ phases:
       - chmod +x ./gradlew
   build:
     commands:
-      - ./gradlew clean build -x test
+      - ./gradlew clean build
   post_build:
     commands:
       - echo "빌드 완료"
