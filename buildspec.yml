@@ -8,7 +8,7 @@ phases:
     commands:
       - echo "빌드 시작"
       - docker run -d -p 3306:3306 --name mysql-db -e MYSQL_ROOT_PASSWORD=aivle -e MYSQL_DATABASE=mini5 public.ecr.aws/docker/library/mysql:8.0
-      - sleep 15
+      - sleep 30
       - chmod +x ./gradlew
   build:
     commands:
