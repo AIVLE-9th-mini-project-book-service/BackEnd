@@ -1,0 +1,21 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: 17
+  pre_build:
+    commands:
+      - echo "빌드 시작"
+      - chmod +x ./gradlew
+  build:
+    commands:
+      - ./gradlew clean build -x test
+  post_build:
+    commands:
+      - echo "빌드 완료"
+      - ls -l build/libs/
+
+artifacts:
+  files:
+    - 'build/libs/*.jar'
