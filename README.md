@@ -273,6 +273,9 @@ src/
 
   <img width="452" height="278" alt="Image" src="https://github.com/user-attachments/assets/0b917374-71cf-40ec-93a4-d4a983816aa1" />
 
+
+# 빌드테스트
+
   - JWT claim에 role: ADMIN 추가
   - 관리자 전용 API 별도 생성 (/admin/books/{id}, /admin/comments/{id})
   - checkOwner() 없이 모든 도서/댓글 수정삭제 가능
