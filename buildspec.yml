@@ -1,0 +1,30 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto17
+
+  pre_build:
+    commands:
+      - echo "Gradle wrapper 권한 설정"
+      - chmod +x ./gradlew
+
+  build:
+    commands:
+      - echo "Spring Boot 빌드 시작"
+      - ./gradlew clean build -x test
+
+  post_build:
+    commands:
+      - echo "Build completed"
+
+artifacts:
+  files:
+    - build/libs/*.jar
+  discard-paths: yes
+
+cache:
+  paths:
+    - ~/.gradle/caches/**/*
+    - ~/.gradle/wrapper/**/*
