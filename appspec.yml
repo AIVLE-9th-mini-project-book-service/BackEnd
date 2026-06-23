@@ -6,8 +6,8 @@ files:
 permissions:
   - object: /var/www/backend-project
     pattern: "**"
-    owner: ubuntu
-    group: ubuntu
+    owner: root
+    group: root
 hooks:
   AfterInstall:
     - location: scripts/deploy.sh
