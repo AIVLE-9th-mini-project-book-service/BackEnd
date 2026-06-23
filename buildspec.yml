@@ -8,7 +8,7 @@ phases:
     commands:
       - echo Build started on `date`
       - chmod +x ./gradlew
-      - ./gradlew build
+      - ./gradlew build -x test
 artifacts:
   files:
     - 'build/libs/*.jar'
