@@ -5,11 +5,14 @@ files:
     destination: /var/www/backend-project
 permissions:
   - object: /var/www/backend-project
-    pattern: "**"
-    owner: root
-    group: root
+    pattern: '**'
+    mode: '0755'        
+    owner: root       
+    group: root     
+    type:              
+      - file
+      - directory
 hooks:
   AfterInstall:
     - location: scripts/deploy.sh
-      timeout: 60
-      runas: ubuntu
+      timeout: 300

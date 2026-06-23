@@ -21,4 +21,4 @@ artifacts:
     - 'backend-project/**/*'
     - 'build/libs/*.jar'
     - appspec.yml
-    - 'deploy-scripts/**/*'
+    - 'scripts/**/*'
