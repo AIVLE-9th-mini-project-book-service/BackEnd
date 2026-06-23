@@ -9,4 +9,6 @@ phases:
 artifacts:
   files:
     - build/libs/*.jar
+    - appspec.yml
+    - deploy-scripts/**/*
   discard-paths: no
