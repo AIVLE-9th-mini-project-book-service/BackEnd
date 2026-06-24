@@ -12,3 +12,15 @@ phases:
 artifacts:
   files:
     - 'build/libs/*.jar'
+post_build:
+    commands:
+      - echo Pushing to ECR...
+      - REPOSITORY_URI=879772956301.dkr.ecr.us-east-1.amazonaws.com/내-리포지토리-이름 # 여기에 아까 복사한 URI 넣기
+      - docker build -t $REPOSITORY_URI:latest .
+      - docker push $REPOSITORY_URI:latest
+      - printf '[{"name":"backend-container","imageUri":"%s"}]' $REPOSITORY_URI:latest > imagedefinitions.json
+artifacts:
+  files:
+    - imagedefinitions.json
+    - deployment.yaml
+    - service.yaml
