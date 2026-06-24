@@ -26,9 +26,7 @@ spring:
 
 
 cors:
-  allowed-origins: 
-    - "http://localhost:5173"
-    - "http://user132-frontend-website.s3-website-us-east-1.amazonaws.com"
+  allowed-origins: "http://localhost:5173,http://user132-frontend-website.s3-website-us-east-1.amazonaws.com"
 
 jwt:
   secret: mySecretKey1234567890mySecretKey1234567890123456
