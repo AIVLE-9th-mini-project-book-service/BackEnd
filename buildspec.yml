@@ -11,6 +11,8 @@ phases:
       - ./gradlew build -x test
   post_build:
     commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 879772956301.dkr.ecr.us-east-1.amazonaws.com
       - echo Pushing to ECR...
       - REPOSITORY_URI=879772956301.dkr.ecr.us-east-1.amazonaws.com/user134-backend-repo
       - docker build -t $REPOSITORY_URI:latest .
