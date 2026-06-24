@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+
+.git
+.gradle
+build
+
+*.pem
+*.key
+.aws
+.kube

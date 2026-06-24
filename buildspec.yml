@@ -1,30 +1,72 @@
 version: 0.2
 
+env:
+  variables:
+    AWS_DEFAULT_REGION: us-east-2
+    IMAGE_REPO_NAME: team20-y-backend
+    GRADLE_USER_HOME: /root/.gradle
+    TZ: Asia/Seoul
+    JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8 -Duser.timezone=Asia/Seoul"
+
 phases:
   install:
     runtime-versions:
       java: corretto17
+    commands:
+      - echo "Check Java"
+      - java -version
+      - echo "Set Gradle wrapper permission"
+      - chmod +x ./gradlew
+      - ./gradlew --version
+      - echo "Check Docker"
+      - docker --version
 
   pre_build:
     commands:
-      - echo "Gradle wrapper 권한 설정"
-      - chmod +x ./gradlew
+      - echo "Login to Amazon ECR"
+      - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - REPOSITORY_URI=$ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - IMAGE_TAG=$(echo ${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest} | cut -c 1-7)
+      - echo "REPOSITORY_URI=$REPOSITORY_URI"
+      - echo "IMAGE_TAG=$IMAGE_TAG"
 
   build:
     commands:
-      - echo "Spring Boot 빌드 시작"
-      - ./gradlew clean build -x test
+      - echo "Build Spring Boot application"
+      - ./gradlew clean bootJar -x test --no-daemon --stacktrace
+
+      - echo "Prepare JAR for Docker image"
+      - mkdir -p artifact
+      - JAR_FILE=$(find build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*plain.jar" | head -n 1)
+      - echo "JAR_FILE=$JAR_FILE"
+      - test -n "$JAR_FILE"
+      - cp "$JAR_FILE" artifact/app.jar
+
+      - echo "Build Docker image"
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:latest
 
   post_build:
     commands:
+      - echo "Push Docker image to ECR"
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - docker push $REPOSITORY_URI:latest
+
+      - echo "Update Kubernetes manifest image"
+      - sed -i "s|IMAGE_URI_PLACEHOLDER|$REPOSITORY_URI:$IMAGE_TAG|g" k8s/deployment.yaml
+      - cat k8s/deployment.yaml
+
       - echo "Build completed"
 
 artifacts:
   files:
-    - build/libs/*.jar
-  discard-paths: yes
+    - k8s/**/*
+    - buildspec-deploy.yml
+  discard-paths: no
 
 cache:
   paths:
-    - ~/.gradle/caches/**/*
-    - ~/.gradle/wrapper/**/*
+    - "/root/.gradle/caches/**/*"
+    - "/root/.gradle/wrapper/**/*"

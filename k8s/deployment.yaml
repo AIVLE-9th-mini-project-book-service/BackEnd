@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: team20-y-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: team20-y-backend
+  template:
+    metadata:
+      labels:
+        app: team20-y-backend
+    spec:
+      containers:
+        - name: team20-y-backend
+          image: IMAGE_URI_PLACEHOLDER
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: bookapp-config
+            - secretRef:
+                name: bookapp-secret
+          # Actuator
+          readinessProbe:
+            httpGet:
+              path: /api/actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /api/actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 20

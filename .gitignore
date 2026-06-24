@@ -36,5 +36,30 @@ out/
 ### VS Code ###
 .vscode/
 
-### Secrets ###
-src/main/resources/application.yaml
+### Environment variables ###
+.env
+.env.*
+!.env.example
+
+### AWS / SSH secrets ###
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+.aws/
+.kube/
+kubeconfig
+config
+
+### Secret application configs ###
+application-local.yml
+application-prod.yml
+application-secret.yml
+
+### Docker / local override ###
+docker-compose.override.yml
+
+### Build outputs ###
+build/
+.gradle/
