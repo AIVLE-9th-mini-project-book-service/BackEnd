@@ -24,11 +24,21 @@ public class JwtFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String path = request.getRequestURI();
+        String requestURI = request.getRequestURI();
+        String method = request.getMethod();
 
         // /admin/** 경로는 JwtFilter 통과 (AdminController에서 자체 검증)
         if (path.contains("/admin/")) {
             filterChain.doFilter(request, response);
             return;
+        }
+
+        if ("OPTIONS".equalsIgnoreCase(method) || 
+            requestURI.contains("/members/signup") || 
+            requestURI.contains("/members/login")) {
+            
+            filterChain.doFilter(request, response);
+            return; // 여기서 필터 종료하고 다음 단계로 넘겨버림
         }
 
         String authHeader = request.getHeader("Authorization");
