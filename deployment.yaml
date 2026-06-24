@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: backend-container
-        image: <본인의_ECR_리포지토리_URI>:latest 
+        image: 879772956301.dkr.ecr.us-east-1.amazonaws.com/user134-backend-repo:latest 
         ports:
         - containerPort: 8080
