@@ -47,8 +47,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/books/*/comments").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/comments/*").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/comments/*").permitAll()
-                        .requestMatchers("/admin/login").permitAll()      // 추가
-                        .requestMatchers("/admin/**").permitAll()         // 추가
+                        .requestMatchers("/admin/login").permitAll()
+                        .requestMatchers("/admin/**").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
