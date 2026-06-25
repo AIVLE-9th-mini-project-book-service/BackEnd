@@ -10,7 +10,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://mysql-service:3306/mini5?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
-    password: aivle
+    password: password1234
   jpa:
     hibernate:
       ddl-auto: update
