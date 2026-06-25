@@ -17,12 +17,10 @@ else
     sleep 5
 fi
 
-# =========================================================================
-# ✨ [여기 추가!] CloudWatch Agent 자동 설치 및 로그 수집 세팅 (수저 물리기)
-# =========================================================================
 echo "> CloudWatch Agent 설치 여부 확인 및 진행"
 if ! rpm -qa | grep -q amazon-cloudwatch-agent; then
-    wget https://s3.amazonaws.com/amazoncloudwatchagent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+    wget https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+    
     sudo rpm -Uvh amazon-cloudwatch-agent.rpm
 fi
 
