@@ -17,6 +17,44 @@ else
     sleep 5
 fi
 
+# =========================================================================
+# ✨ [여기 추가!] CloudWatch Agent 자동 설치 및 로그 수집 세팅 (수저 물리기)
+# =========================================================================
+echo "> CloudWatch Agent 설치 여부 확인 및 진행"
+if ! rpm -qa | grep -q amazon-cloudwatch-agent; then
+    wget https://s3.amazonaws.com/amazoncloudwatchagent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+    sudo rpm -Uvh amazon-cloudwatch-agent.rpm
+fi
+
+echo "> CloudWatch Agent 설정 파일(config.json) 생성"
+cat << 'EOF' > /opt/aws/amazon-cloudwatch-agent/bin/config.json
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root"
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/www/backend-project/nohup.out",
+            "log_group_name": "user132-backend-log",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 7
+          }
+        ]
+      }
+    }
+  }
+}
+EOF
+
+echo "> CloudWatch Agent 설정 적용 및 강제 재시작"
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+-a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
+# =========================================================================
+
 echo "> 새 애플리케이션 배포 및 실행 권한 추가"
 chmod +x $JAR_NAME
 
