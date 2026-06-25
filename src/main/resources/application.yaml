@@ -7,8 +7,7 @@ spring:
   application:
     name: bookapp
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://mysql-service:3306/mini5?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://mysql-service:3306/${DB_NAME:mini5}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
     password: password1234
   jpa:
