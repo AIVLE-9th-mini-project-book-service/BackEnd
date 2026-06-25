@@ -27,4 +27,4 @@ spec:
         - name: DB_PASSWORD
           value: "password1234"  
         - name: DB_NAME
-          value: "bookdb"        
+          value: "mini5"        
