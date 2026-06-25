@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: backend  # 파드의 라벨이 'app: backend'여야 함
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
