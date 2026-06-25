@@ -17,3 +17,8 @@ spec:
         image: 879772956301.dkr.ecr.us-east-1.amazonaws.com/user134-backend-repo:latest 
         ports:
         - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: "mysql"
+        - name: DB_PORT
+          value: "3306"
